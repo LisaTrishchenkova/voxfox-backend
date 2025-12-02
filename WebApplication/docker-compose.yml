@@ -1,0 +1,32 @@
+﻿version: "3.9"
+services:
+  voxfox:
+    image: ${DOCKER_REGISTRY-}voxfox
+    build:
+      context: .
+      dockerfile: VoxFox/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__voxfox_db=Host=postgres;Port=5432;Database=voxfox_db;Username=postgres;Password=password
+    depends_on:
+      - postgres
+
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=voxfox_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    command: 
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=uuid-ossp" # 🔥 Включаем UUID расширение
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
