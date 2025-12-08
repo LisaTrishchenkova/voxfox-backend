@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using Microsoft.AspNetCore.Mvc;
 using VoxFox.Models.Requests;
+using VoxFox.Models.Responses;
 
 namespace VoxFox.Controllers
 {
@@ -7,8 +9,16 @@ namespace VoxFox.Controllers
     [Route("[controller]")]
     public class AuthController : ControllerBase
     {
-        // ".../api/auth/login" 
+
+        /// <summary>
+        /// Ручка для входа
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns>
+        ///Ответ ручки для входа
+        /// </returns>
         [HttpPost("login")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LoginResponse))]
         public IActionResult Login(
             [FromBody] LoginRequest request
             )
@@ -25,5 +35,31 @@ namespace VoxFox.Controllers
         {
             return Ok();
         }
+
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RefreshResponse))]
+        [HttpPost("refresh")]
+        public IActionResult Refresh(
+           [FromBody] RefreshRequest request
+       )
+        {
+            return Ok();
+        }
+
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MeResponse))]
+        [HttpGet("me")]
+        public IActionResult Me()
+        {
+            return Ok();
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout(
+            [FromBody] LogoutRequest request
+        )
+        {
+            return Ok();
+        }
+
     }
+
 }

@@ -1,5 +1,6 @@
 
 
+using System.Reflection;
 using System.Security.Cryptography.Xml;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -22,6 +23,7 @@ namespace VoxFox
             SettingJWT(builder);
 
             builder.Services.AddAuthorization();
+            builder.Services.AddEndpointsApiExplorer();
 
             builder.Services.AddSwaggerGen(c =>
             {
@@ -31,16 +33,17 @@ namespace VoxFox
                     Version = "v1"
                 });
 
-                c.AddSecurityDefinition("JwtBearer", new OpenApiSecurityScheme
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    Description = @"JWT Authorization header using the Bearer scheme. 
+                    Description = @"JWT Authorization header using the Bearer scheme.
                                   Enter your token in the text input below.
                                   Example: 'Bearer 12345abcdef'",
                     Name = "Authorization",
                     In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.ApiKey,
+                    Type = SecuritySchemeType.Http,
                     Scheme = "Bearer"
                 });
+
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement()
                 {
@@ -60,6 +63,9 @@ namespace VoxFox
                         new List<string>()
                     }
                 });
+
+                var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
             });
 
             var app = builder.Build();
@@ -67,12 +73,21 @@ namespace VoxFox
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
+                app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "VoxFox API V1");
                     // c.RoutePrefix = string.Empty;
+                    c.EnablePersistAuthorization();
                 });
-                app.UseSwagger();
+
+                app.UseReDoc(o =>
+                {
+                    o.DocumentTitle = "бля бля бля";
+                    o.SpecUrl = "/swagger/v1/swagger.json";
+                    o.RoutePrefix = "api-docs";
+
+                });
 
             }
 
