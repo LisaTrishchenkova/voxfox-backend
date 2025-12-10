@@ -1,11 +1,14 @@
 
 
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Security.Cryptography.Xml;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using VoxFox.Interfaces;
+using VoxFox.Services;
 namespace VoxFox
 {
     public class Program
@@ -15,6 +18,18 @@ namespace VoxFox
             var builder = WebApplication.CreateBuilder(args);
 
             builder.WebHost.UseUrls("http://*:5000");
+            builder.Services.AddCors(options =>
+          {
+              options.AddPolicy("AllowReactApp",
+                  policy =>
+                  {
+                      policy.WithOrigins("http://localhost:5173") // React app URL
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials(); // If you need to send cookies
+                  });
+          });
+
 
             // Add services to the container.
 
@@ -68,6 +83,7 @@ namespace VoxFox
                 c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
             });
 
+            builder.Services.AddScoped<IJwtService, JwtService>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -90,7 +106,7 @@ namespace VoxFox
                 });
 
             }
-
+            app.UseCors("AllowReactApp");
             //app.UseHttpsRedirection();
 
             app.UseAuthentication();
@@ -105,7 +121,16 @@ namespace VoxFox
         private static void SettingJWT(WebApplicationBuilder builder)
         {
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-            var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"]);
+            // var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"]);
+            var secretKey = jwtSettings["Secret"];
+            var issuer = jwtSettings["Issuer"];
+            var audience = jwtSettings["Audience"];
+
+            var secretKeyBytes = Encoding.UTF8.GetBytes(secretKey);
+
+            var symmetricSecurityKey = new SymmetricSecurityKey(secretKeyBytes);
+            builder.Services.AddSingleton(symmetricSecurityKey);
+
 
             builder.Services.AddAuthentication(o =>
             {
@@ -121,20 +146,28 @@ namespace VoxFox
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(secretKeyBytes),
                     ValidIssuer = jwtSettings["Issuer"],
                     ValidAudience = jwtSettings["Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(secretKey),
                     ClockSkew = TimeSpan.Zero
                 };
 
-                o.Events = new JwtBearerEvents
+                 o.Events = new JwtBearerEvents
                 {
                     OnAuthenticationFailed = context =>
                     {
-                        if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
-                        {
-                            context.Response.Headers.Add("Token-Expired", "true");
-                        }
+                        Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+                        Console.WriteLine($"Exception: {context.Exception}");
+                        return Task.CompletedTask;
+                    },
+                    OnChallenge = context =>
+                    {
+                        Console.WriteLine($"Challenge: {context.Error}, {context.ErrorDescription}");
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        Console.WriteLine("Token validated successfully");
                         return Task.CompletedTask;
                     }
                 };
