@@ -49,7 +49,8 @@ namespace VoxFox.Controllers
             [FromBody] RegistrationRequest request
         )
         {
-            return Ok();
+
+            return NoContent();
         }
 
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RefreshResponse))]
