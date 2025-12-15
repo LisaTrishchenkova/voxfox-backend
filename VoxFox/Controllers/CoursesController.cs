@@ -1,43 +1,50 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using VoxFox.Models.Entities;
 using VoxFox.Models.Requests;
 using VoxFox.Models.Responses;
+using static System.Net.WebRequestMethods;
 
 namespace VoxFox.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class CourceController : ControllerBase
+    public class CoursesController : ControllerBase
     {
 
         private readonly ApplicationContext _context;
 
-        public CourceController(ApplicationContext context)
+        public CoursesController(ApplicationContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK, Type =typeof(List<CourseResponse>))]
-        public IActionResult GetAllCourses()
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CourseResponse>))]
+        public async Task<IActionResult> GetAllCourses()
         {
-            var course = _context.Courses.ToList();
+            var courses = await _context.Courses
+                .Where(c => c.IsActive)
+                .ToListAsync();
 
-            var response = course.Select(MapToResponse).ToList();
+            var response = courses.Select(MapToResponse).ToList();
 
             return Ok(response);
         }
-         
+
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseResponse))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetCourseById(
-            [FromRoute] Guid id 
+            [FromRoute] Guid id
         )
         {
             var course = _context.Courses.FirstOrDefault(c => c.Id == id);
-            if(course == null)
+            if (course == null)
             {
                 return NotFound("Курс не найден!");
             }
@@ -53,8 +60,8 @@ namespace VoxFox.Controllers
             [FromBody] CreateCourseRequest request
         )
         {
-        var userId = GetCurrentUserId();
-      var course = new Course
+            var userId = GetCurrentUserId();
+            var course = new Course
             {
                 Title = request.Title,
                 Description = request.Description,
@@ -72,19 +79,19 @@ namespace VoxFox.Controllers
                 DiscountedPrice = request.DiscountedPrice,
                 Tags = request.Tags != null ? string.Join(",", request.Tags) : null,
                 Status = "draft",
-                AuthorId = userId.Value,
+                AuthorId = userId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-        _context.Courses.Add(course);
-        
-        _context.SaveChanges();
+            _context.Courses.Add(course);
 
-        return CreatedAtAction(nameof(GetCourseById), new {id = course.Id}, null);
+            _context.SaveChanges();
+
+            return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, null);
         }
 
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -96,7 +103,7 @@ namespace VoxFox.Controllers
         {
             var course = _context.Courses.FirstOrDefault(c => c.Id == id);
 
-            if(course == null)
+            if (course == null)
             {
                 return NotFound("Курс не найден");
             }
@@ -107,40 +114,40 @@ namespace VoxFox.Controllers
                 return Forbid("Вы не являетесь автором этого курса");
             }
 
-            if (!string.IsNullOrEmpty(request.Title)) 
+            if (!string.IsNullOrEmpty(request.Title))
                 course.Title = request.Title;
-            if (!string.IsNullOrEmpty(request.Description)) 
+            if (!string.IsNullOrEmpty(request.Description))
                 course.Description = request.Description;
-            if (request.ShortDescription != null) 
+            if (request.ShortDescription != null)
                 course.ShortDescription = request.ShortDescription;
-            if (!string.IsNullOrEmpty(request.Category)) 
+            if (!string.IsNullOrEmpty(request.Category))
                 course.Category = request.Category;
-            if (!string.IsNullOrEmpty(request.Level)) 
+            if (!string.IsNullOrEmpty(request.Level))
                 course.Level = request.Level;
-            if (request.ImageUrl != null) 
+            if (request.ImageUrl != null)
                 course.ImageUrl = request.ImageUrl;
-            if (request.LessonsCount.HasValue) 
+            if (request.LessonsCount.HasValue)
                 course.LessonsCount = request.LessonsCount.Value;
-            if (!string.IsNullOrEmpty(request.Duration)) 
+            if (!string.IsNullOrEmpty(request.Duration))
                 course.Duration = request.Duration;
-            if (!string.IsNullOrEmpty(request.Format)) 
+            if (!string.IsNullOrEmpty(request.Format))
                 course.Format = request.Format;
-            if (request.HasCertificate.HasValue) 
+            if (request.HasCertificate.HasValue)
                 course.HasCertificate = request.HasCertificate.Value;
-            if (request.HasHomework.HasValue) 
+            if (request.HasHomework.HasValue)
                 course.HasHomework = request.HasHomework.Value;
-            if (request.IsPaid.HasValue) 
+            if (request.IsPaid.HasValue)
                 course.IsPaid = request.IsPaid.Value;
-            if (request.Price.HasValue) 
+            if (request.Price.HasValue)
                 course.Price = request.Price.Value;
-            if (request.DiscountedPrice.HasValue) 
+            if (request.DiscountedPrice.HasValue)
                 course.DiscountedPrice = request.DiscountedPrice.Value;
-            if (request.Tags != null) 
+            if (request.Tags != null)
                 course.Tags = string.Join(",", request.Tags);
-            if (!string.IsNullOrEmpty(request.Status)) 
+            if (!string.IsNullOrEmpty(request.Status))
                 course.Status = request.Status;
 
-            course.UpdatedAt = DateTime.UtcNow;     
+            course.UpdatedAt = DateTime.UtcNow;
             _context.SaveChanges();
 
             return NoContent();
@@ -150,13 +157,13 @@ namespace VoxFox.Controllers
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        
+
         public IActionResult DeleteCourse(
             [FromRoute] Guid id
         )
         {
             var course = _context.Courses.FirstOrDefault(c => c.Id == id);
-            if(course == null)
+            if (course == null)
             {
                 return NotFound("Курс не найден");
             }
@@ -237,22 +244,25 @@ namespace VoxFox.Controllers
 
         //     var response = courses.Select(c => new CourseResponse
         //     {
-                
+
         //     }).ToList();
         //     return Ok(response);
         // }
 
-        private Guid? GetCurrentUserId()
+        private Guid GetCurrentUserId()
         {
-            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "userId");
+            // var claims = User.Claims.ToList();
+            // var userIdClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out Guid userId))
             {
                 return userId;
             }
-            return null;
+
+            throw new InvalidOperationException("User ID claim not found");
         }
 
-          private CourseResponse MapToResponse(Course course)
+        private CourseResponse MapToResponse(Course course)
         {
             return new CourseResponse
             {
@@ -282,5 +292,3 @@ namespace VoxFox.Controllers
         }
     }
 }
-
-
