@@ -20,16 +20,15 @@ namespace VoxFox
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddCors(options =>
-          {
-              options.AddPolicy("AllowReactApp",
-                  policy =>
-                  {
-                      policy.WithOrigins("http://localhost:5173") // React app URL
-                            .AllowAnyHeader()
-                            .AllowAnyMethod()
-                            .AllowCredentials(); // If you need to send cookies
-                  });
-          });
+            {
+                options.AddPolicy("AllowAll",
+                    policy =>
+                    {
+                        policy.AllowAnyOrigin()    // Любой origin
+                            .AllowAnyHeader()    // Любые заголовки
+                            .AllowAnyMethod();   // Любые методы
+                    });
+            });
 
 
             // Add services to the container.
@@ -90,6 +89,9 @@ namespace VoxFox
 
             var app = builder.Build();
 
+            app.UseRouting();
+            app.UseCors("AllowAll");
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -110,7 +112,6 @@ namespace VoxFox
                 });
 
             }
-            app.UseCors("AllowReactApp");
             //app.UseHttpsRedirection();
 
             app.UseAuthentication();
