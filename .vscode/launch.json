@@ -2,12 +2,56 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch VoxFox API",
+            "name": "VoxFox API (http profile)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/VoxFox/bin/Debug/net9.0/VoxFox.dll",
-            "args": [],
+            "args": [
+                "--launch-profile", "http"
+            ],
+            "cwd": "${workspaceFolder}/VoxFox",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s/swagger"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "VoxFox API (https profile)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/VoxFox/bin/Debug/net9.0/VoxFox.dll",
+            "args": [
+                "--launch-profile", "https"
+            ],
+            "cwd": "${workspaceFolder}/VoxFox",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s/swagger"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "VoxFox API (Docker profile)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/VoxFox/bin/Debug/net9.0/VoxFox.dll",
+            "args": [
+                "--launch-profile", "Container (Dockerfile)"
+            ],
             "cwd": "${workspaceFolder}/VoxFox",
             "stopAtEntry": false,
             "serverReadyAction": {

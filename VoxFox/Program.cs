@@ -19,9 +19,6 @@ namespace VoxFox
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddDbContext<ApplicationContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-            builder.WebHost.UseUrls("http://*:5000");
             builder.Services.AddCors(options =>
           {
               options.AddPolicy("AllowReactApp",
@@ -88,6 +85,9 @@ namespace VoxFox
             });
 
             builder.Services.AddScoped<IJwtService, JwtService>();
+
+            ConfigureDatabase(builder);
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -103,7 +103,7 @@ namespace VoxFox
 
                 app.UseReDoc(o =>
                 {
-                    o.DocumentTitle = "бля бля бля";
+                    o.DocumentTitle = "111";
                     o.SpecUrl = "/swagger/v1/swagger.json";
                     o.RoutePrefix = "api-docs";
 
@@ -176,6 +176,19 @@ namespace VoxFox
                     }
                 };
             });
+        }
+
+        private static void ConfigureDatabase(WebApplicationBuilder builder)
+        {
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
+
+            builder.Services.AddDbContext<Models.Entities.ApplicationContext>(options =>
+                options
+                    .UseNpgsql(connectionString, o =>
+                        o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
+
+            builder.Services.AddHostedService<MigrationHostedService>();
+            // builder.Services.AddHostedService<DatabaseInitializerService>();
         }
     }
 }
