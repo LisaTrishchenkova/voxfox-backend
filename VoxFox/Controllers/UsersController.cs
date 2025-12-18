@@ -28,7 +28,8 @@ namespace VoxFox.Controllers
             }
             var userResponse = new UserResponse
             {
-                Name = user.Name
+                Name = user.Name,
+                Email = user.Email
             };
             return Ok(userResponse);
         }
