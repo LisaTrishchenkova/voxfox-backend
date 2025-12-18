@@ -221,6 +221,7 @@ namespace VoxFox.Controllers
             }
 
             var courses = _context.Courses
+                .Include(c => c.Author)
                 .Where(c => c.AuthorId == userId && c.IsActive)
                 .OrderByDescending(c => c.UpdatedAt)
                 .ToList();
