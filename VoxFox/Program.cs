@@ -37,9 +37,9 @@ namespace VoxFox
 
             builder.Services.AddControllers();
 
-            SettingJWT(builder);
+            // SettingJWT(builder);
 
-            builder.Services.AddAuthorization();
+            // builder.Services.AddAuthorization();
             builder.Services.AddEndpointsApiExplorer();
 
             builder.Services.AddSwaggerGen(c =>
@@ -50,44 +50,44 @@ namespace VoxFox
                     Version = "v1"
                 });
 
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    Description = @"JWT Authorization header using the Bearer scheme.
-                                  Enter your token in the text input below.
-                                  Example: 'Bearer 12345abcdef'",
-                    Name = "Authorization",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "Bearer"
-                });
+                // c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                // {
+                //     Description = @"JWT Authorization header using the Bearer scheme.
+                //                   Enter your token in the text input below.
+                //                   Example: 'Bearer 12345abcdef'",
+                //     Name = "Authorization",
+                //     In = ParameterLocation.Header,
+                //     Type = SecuritySchemeType.Http,
+                //     Scheme = "Bearer"
+                // });
 
 
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            },
-                            Scheme = "oauth2",
-                            Name = "Bearer",
-                            In = ParameterLocation.Header,
-                        },
+                // c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                // {
+                //     {
+                //         new OpenApiSecurityScheme
+                //         {
+                //             Reference = new OpenApiReference
+                //             {
+                //                 Type = ReferenceType.SecurityScheme,
+                //                 Id = "Bearer"
+                //             },
+                //             Scheme = "oauth2",
+                //             Name = "Bearer",
+                //             In = ParameterLocation.Header,
+                //         },
 
-                        new List<string>()
-                    }
-                });
+                //         new List<string>()
+                //     }
+                // });
 
-                var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-                c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+                // var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                // c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
             });
 
-            builder.Services.AddScoped<IJwtService, JwtService>();
+            // builder.Services.AddScoped<IJwtService, JwtService>();
 
-            ConfigureDatabase(builder);
+            // ConfigureDatabase(builder);
 
             var app = builder.Build();
 
@@ -102,7 +102,7 @@ namespace VoxFox
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "VoxFox API V1");
                     // c.RoutePrefix = string.Empty;
-                    c.EnablePersistAuthorization();
+                    // c.EnablePersistAuthorization();
                 });
 
                 app.UseReDoc(o =>
@@ -116,8 +116,8 @@ namespace VoxFox
             }
             //app.UseHttpsRedirection();
 
-            app.UseAuthentication();
-            app.UseAuthorization();
+            // app.UseAuthentication();
+            // app.UseAuthorization();
 
 
             app.MapControllers();
