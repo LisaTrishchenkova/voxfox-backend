@@ -4,11 +4,12 @@ namespace VoxFox.Models.Entities
 {
     public class CourseTest
     {
-        public int Id { get; set; }
         [Required]
-        public string Title { get; set; }
+        public Guid Id { get; set; }
         [Required]
-        public string Description { get; set; }
+        public string Title { get; set; } = null!;
+        [Required]
+        public string Description { get; set; } = null!;
 
         public string? Tags { get; set; }
     }

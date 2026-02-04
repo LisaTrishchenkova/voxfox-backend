@@ -9,7 +9,6 @@ namespace VoxFox.Controllers
     public class CoursesTestController : ControllerBase
     {
         private static List<CourseTest> courses = new List<CourseTest>();
-        private static int _Id = 1;
 
         [HttpPost("Course")]
         public IActionResult Create(
@@ -22,19 +21,57 @@ namespace VoxFox.Controllers
             }
             var course = new CourseTest
             {
-                Id = _Id++,
+                Id = Guid.NewGuid(),
                 Title = request.Title,
                 Description = request.Description,
                 Tags = request.Tags
             };
             courses.Add(course);
-            return NoContent(); //CreatedAtAction();
+            return CreatedAtAction(
+                nameof(GetCourseById),
+                new { id = course.Id },
+                course
+            );
         }
 
         [HttpGet("Courses")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseTestResponse))]
         public IActionResult GetAllCourses()
         {
-            return Ok(courses);
+            if (courses == null)
+            {
+                return NoContent();
+            }
+            var response = courses.Select(course => new CourseTestResponse
+            {
+                Id = course.Id,
+                Title = course.Title,
+                Description = course.Description,
+                Tags = course.Tags
+            }).ToList();
+            return Ok(response);
+        }
+
+        [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseTestResponse))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult GetCourseById(
+            [FromRoute] Guid id
+        )
+        {
+            var course = courses.FirstOrDefault(c => c.Id == id);
+            if (course == null)
+            {
+                return NotFound();
+            }
+            var response = new CourseTestResponse
+            {
+                Id = course.Id,
+                Title = course.Title,
+                Description = course.Description,
+                Tags = course.Tags
+            };
+            return Ok(response);
         }
     }
 }

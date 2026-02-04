@@ -4,8 +4,8 @@ namespace VoxFox.Models.Requests
 {
     public class CreateCourseTestRequest
     {
-        [Required]
-        [MinLength(2)]
+        // [Required]
+        // [MinLength(2)]
         public string Title { get; set; }
 
         [Required]
