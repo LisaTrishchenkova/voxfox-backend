@@ -1,8 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-
-namespace VoxFox.Models.Requests
-{
-    public class CreateCourseTestRequest
+   public class CreateCourseDto
     {
         [Required]
         [MinLength(2)]
@@ -15,4 +12,3 @@ namespace VoxFox.Models.Requests
         [MinLength(8)]
         public string Tags { get; set; }
     }
-}

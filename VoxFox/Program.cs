@@ -89,6 +89,8 @@ namespace VoxFox
 
             // ConfigureDatabase(builder);
 
+            builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+            builder.Services.AddScoped<ICourseService, CourseService>();
             var app = builder.Build();
 
             app.UseRouting();
