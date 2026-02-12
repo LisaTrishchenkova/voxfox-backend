@@ -1,0 +1,62 @@
+name: Build and Push Backend to ECR (DEV)
+
+env:
+  AWS_REGION: eu-north-1
+  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+  ECR_REPOSITORY: voxfox-backend-dev
+
+on:
+  push:
+    branches: ["dev", "feature/*", "bugfix/*", "chore/*"]
+    paths:
+      - "VoxFox/**"
+      - "Dockerfile"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Generate dev tag
+        id: tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BRANCH_NAME=${GITHUB_REF_NAME//\//-}
+          DATE=$(date -u +'%Y%m%d-%H%M')
+          echo "tag=${BRANCH_NAME}-${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Build and push DEV image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          docker build \
+            --target development \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest-dev \
+            -f Dockerfile .
+
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest-dev

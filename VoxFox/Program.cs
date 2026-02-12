@@ -11,6 +11,10 @@ using VoxFox.Interfaces;
 using VoxFox.Services;
 using VoxFox.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
+using System;
+using System.Threading.Tasks;
 namespace VoxFox
 {
     public class Program
@@ -89,8 +93,8 @@ namespace VoxFox
 
             // ConfigureDatabase(builder);
 
-            builder.Services.AddScoped<ICourseRepository, CourseRepository>();
-            builder.Services.AddScoped<ICourseService, CourseService>();
+            // builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+            // builder.Services.AddScoped<ICourseService, CourseService>();
             var app = builder.Build();
 
             app.UseRouting();
@@ -183,17 +187,17 @@ namespace VoxFox
             });
         }
 
-        private static void ConfigureDatabase(WebApplicationBuilder builder)
-        {
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
+        // private static void ConfigureDatabase(WebApplicationBuilder builder)
+        // {
+        //     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
 
-            builder.Services.AddDbContext<Models.Entities.ApplicationContext>(options =>
-                options
-                    .UseNpgsql(connectionString, o =>
-                        o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
+        //     builder.Services.AddDbContext<Models.Entities.ApplicationContext>(options =>
+        //         options
+        //             .UseNpgsql(connectionString, o =>
+        //                 o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
 
-            builder.Services.AddHostedService<MigrationHostedService>();
-            // builder.Services.AddHostedService<DatabaseInitializerService>();
-        }
+        //     builder.Services.AddHostedService<MigrationHostedService>();
+        //     // builder.Services.AddHostedService<DatabaseInitializerService>();
+        // }
     }
 }
