@@ -58,7 +58,7 @@ jobs:
           VERSION_TAG: ${{ steps.version.outputs.new-tag }}
         run: |
           docker build \
-            --target production \  # или специальный staging target
+            --target staging \  # ← ВАЖНО: staging, а не production!
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
             -f Dockerfile .
@@ -66,9 +66,9 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.version.outputs.new-tag }}
-          name: Release ${{ steps.version.outputs.new-tag }}
-          generate_release_notes: true
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     tag_name: ${{ steps.version.outputs.new-tag }}
+      #     name: Release ${{ steps.version.outputs.new-tag }}
+      #     generate_release_notes: true
