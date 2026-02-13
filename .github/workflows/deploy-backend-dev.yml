@@ -3,7 +3,7 @@ name: Build and Push Backend to ECR (DEV)
 env:
   AWS_REGION: eu-north-1
   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
-  ECR_REPOSITORY: gisatrishchenkova/voxfox-practice-backend
+  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
 
 on:
   push:
@@ -13,14 +13,13 @@ on:
       - "Dockerfile"
   workflow_dispatch:
 
-permissions:
-  id-token: write
-  contents: write
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    environment: dev
+
+    permissions:
+      id-token: write
+      contents: write
 
     steps:
       - name: Checkout code

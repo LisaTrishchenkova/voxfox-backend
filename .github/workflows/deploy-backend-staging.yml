@@ -1,54 +1,41 @@
-name: Build and Push Backend to ECR (STAGING)
+name: Release to Staging
 
 env:
   AWS_REGION: eu-north-1
   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
-  ECR_REPOSITORY: voxfox-backend-staging
+  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
 
 on:
   push:
-    branches: ["staging", "release/*"]
-    paths:
-      - "VoxFox/**"
-      - "Dockerfile"
+    branches:
+      - staging # или release/*
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Custom tag (optional)"
-        required: false
-        type: string
-
-permissions:
-  id-token: write
-  contents: read
+      version_type:
+        description: "Тип версии"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
-  build-and-push:
+  release:
     runs-on: ubuntu-latest
-    environment: staging
+    permissions:
+      id-token: write
+      contents: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          fetch-depth: 2
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "9.0.x"
-
-      - name: Restore dependencies
-        run: cd VoxFox && dotnet restore
-
-      - name: Build
-        run: cd VoxFox && dotnet build --configuration Release --no-restore
-
-      - name: Test
-        run: cd VoxFox && dotnet test --configuration Release --no-build --verbosity normal
+          fetch-depth: 0
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
@@ -58,49 +45,30 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Generate staging tag
-        id: tag
+      - name: Generate staging version
+        id: version
         run: |
-          if [[ "${{ github.event.inputs.tag }}" != "" ]]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-            echo "source=manual" >> $GITHUB_OUTPUT
-          else
-            SHORT_SHA=$(git rev-parse --short HEAD)
-            DATE=$(date -u +'%Y%m%d-%H%M')
-            echo "tag=staging-${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
-            echo "source=auto" >> $GITHUB_OUTPUT
-          fi
-          echo "timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+          VERSION_TYPE=${{ github.event.inputs.version_type || 'patch' }}
 
-      - name: Build and push STAGING image
+          bash ./scripts/git_update.sh -v $VERSION_TYPE
+
+      - name: Build and push staging image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          VERSION_TAG: ${{ steps.version.outputs.new-tag }}
         run: |
-          # Build staging image (с отладочными инструментами!)
           docker build \
-            --target staging \
-            --build-arg BUILD_DATE="${{ steps.tag.outputs.timestamp }}" \
-            --build-arg VCS_REF="${{ github.sha }}" \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest-staging \
+            --target production \  # или специальный staging target
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
             -f Dockerfile .
 
-          # Push образа
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest-staging
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging
 
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Notify staging deployment
-        run: |
-          echo "✅ Staging deployment complete!"
-          echo "📦 Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}"
-          echo "🔍 Source: ${{ steps.tag.outputs.source }}"
-
-      - name: Verify image in ECR
-        run: |
-          aws ecr describe-images \
-            --repository-name ${{ env.ECR_REPOSITORY }} \
-            --image-ids imageTag=${{ steps.tag.outputs.tag }} \
-            --region ${{ env.AWS_REGION }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.new-tag }}
+          name: Release ${{ steps.version.outputs.new-tag }}
+          generate_release_notes: true
