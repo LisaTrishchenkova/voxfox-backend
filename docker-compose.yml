@@ -16,7 +16,7 @@
 
   postgres:
     image: postgres:15
-    environment:
+    environment: 
       - POSTGRES_DB=voxfox_db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
