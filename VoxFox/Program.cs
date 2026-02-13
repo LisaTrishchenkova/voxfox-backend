@@ -11,10 +11,7 @@ using VoxFox.Interfaces;
 using VoxFox.Services;
 using VoxFox.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Threading.Tasks;
+
 namespace VoxFox
 {
     public class Program
