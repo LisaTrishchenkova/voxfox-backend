@@ -21,6 +21,7 @@ public class CourseRepository : ICourseRepository
         if (course == null)
             return false;
         _context.Courses.Remove(course);
+        await _context.SaveChangesAsync();
         return true;
     }
 
@@ -37,7 +38,7 @@ public class CourseRepository : ICourseRepository
         var course = await _context.Courses
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id);
-        if(course == null)
+        if (course == null)
         {
             return null;
         }
