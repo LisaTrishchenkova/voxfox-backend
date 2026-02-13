@@ -35,18 +35,15 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Generate dev tag
-        id: tag
+      - name: Generate version tag
+        id: release
         run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          BRANCH_NAME=${GITHUB_REF_NAME//\//-}
-          DATE=$(date -u +'%Y%m%d-%H%M')
-          echo "tag=${BRANCH_NAME}-${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          bash ./scripts/git_update.sh -v patch
 
       - name: Build and push DEV image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          IMAGE_TAG: ${{ steps.release.outputs.new-tag }}
         run: |
           docker build \
             --target development \
