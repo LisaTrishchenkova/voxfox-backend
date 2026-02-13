@@ -22,7 +22,7 @@ on:
           - major
 
 jobs:
-  release:
+  staging:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -58,7 +58,7 @@ jobs:
           VERSION_TAG: ${{ steps.version.outputs.new-tag }}
         run: |
           docker build \
-            --target staging \  # ← ВАЖНО: staging, а не production!
+            --target staging \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
             -f Dockerfile .
