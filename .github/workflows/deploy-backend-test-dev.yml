@@ -7,8 +7,11 @@ env:
 
 on:
   push:
-    branches:
-      - main
+    branches: ["dev", "feature/*", "bugfix/*", "chore/*"]
+    paths:
+      - "VoxFox/**"
+      - "Dockerfile"
+  workflow_dispatch:
 
 jobs:
   build-and-push:
