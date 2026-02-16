@@ -4,26 +4,52 @@ using VoxFox.Models.Entities;
 public class CourseRepository : ICourseRepository
 {
     private readonly ApplicationContext _context;
-    public CourseRepository(ApplicationContext context)
+    private readonly ILogger<CourseRepository> _logger;
+
+    public CourseRepository(ApplicationContext context, ILogger<CourseRepository> logger)
     {
         _context = context;
+        _logger = logger;
     }
+
     public async Task<Course> AddAsync(Course course)
     {
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
+
         return course;
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Course course)
     {
-        var course = await _context.Courses.FindAsync(id);
-        if (course == null)
-            return false;
-        _context.Courses.Remove(course);
-        await _context.SaveChangesAsync();
-        return true;
+        try
+        {
+            _context.Courses.Remove(course);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex.Message);
+            throw;
+        }
+
     }
+
+    // public async Task<bool> DeleteAsync(Guid id)
+    // {
+    //     var course = await _context.Courses.FindAsync(id);
+    //     if (course == null)
+    //         return false;
+
+    //     _context.Courses.Remove(course);
+    //     await _context.SaveChangesAsync();
+
+    //     return true;
+    // }
+
+    public Task<bool> ExistCourseByIdAsync(Guid id) => _context.Courses.AnyAsync(c => c.Id == id);
 
     public async Task<IList<Course>> GetAllAsync()
     {
@@ -33,17 +59,26 @@ public class CourseRepository : ICourseRepository
         return courses;
     }
 
-    public async Task<Course> GetByIdAsync(Guid id)
+    public async Task<Course?> GetByIdAsync(Guid id)
     {
         var course = await _context.Courses
-            .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id);
-        if (course == null)
-        {
-            return null;
-        }
+
         return course;
     }
+
+    // public async Task<Course?> GetByIdAsync(Guid id)
+    // {
+    //     var course = await _context.Courses
+    //         .AsNoTracking()
+    //         .FirstOrDefaultAsync(c => c.Id == id);
+    //     if (course == null)
+    //     {
+    //         return null;
+    //     }
+    //     return course;
+    // }
+
 
     public async Task<Course> UpdateAsync(Course course)
     {
