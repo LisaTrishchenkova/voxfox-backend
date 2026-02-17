@@ -1,14 +1,6 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using VoxFox.Models.Entities;
-using VoxFox.Models.Requests;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+
 namespace VoxFox.Controllers
 {
     [ApiController]
@@ -30,7 +22,7 @@ namespace VoxFox.Controllers
             try
             {
                 var course = await _courseService.CreateCourseAsync(createCourseDto);
-                return CreatedAtAction(nameof(GetCourseById), new { id = course.Id, course });
+                return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, course);
             }
             catch (System.Exception ex)
             {

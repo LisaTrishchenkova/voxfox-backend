@@ -1,13 +1,14 @@
-
 using VoxFox.Models.Entities;
 
 public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
+
     public CourseService(ICourseRepository courseRepository)
     {
         _courseRepository = courseRepository;
     }
+
     public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto)
     {
         var course = new Course
@@ -16,13 +17,22 @@ public class CourseService : ICourseService
             Description = createCourseDto.Description,
             Tags = createCourseDto.Tags
         };
+
         var createdCourse = await _courseRepository.AddAsync(course);
+
         return MapToDo(createdCourse);
     }
 
     public async Task<bool> DeleteCourseAsync(Guid id)
     {
-        return await _courseRepository.DeleteAsync(id);
+        var course = await _courseRepository.GetByIdAsync(id);
+        if (course == null)
+        {
+            return false;
+        }
+
+        var isSuccess = await _courseRepository.DeleteAsync(course);
+        return isSuccess;
     }
 
     public async Task<IReadOnlyCollection<CourseDto>> GetAllCoursesAsync()
