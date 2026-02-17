@@ -88,24 +88,23 @@ namespace VoxFox
 
             // builder.Services.AddScoped<IJwtService, JwtService>();
 
-            ConfigureDatabase(builder);
+            // ConfigureDatabase(builder);
 
-            builder.Services.AddScoped<ICourseRepository, CourseRepository>();
-            builder.Services.AddScoped<ICourseService, CourseService>();
+            // builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+            // builder.Services.AddScoped<ICourseService, CourseService>();
             var app = builder.Build();
 
             app.UseRouting();
             app.UseCors("AllowFrontend");
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "VoxFox API V1");
-                    // c.RoutePrefix = string.Empty;
-                    // c.EnablePersistAuthorization();
+                    c.RoutePrefix = "swagger";
                 });
 
                 app.UseReDoc(o =>
@@ -115,7 +114,6 @@ namespace VoxFox
                     o.RoutePrefix = "api-docs";
 
                 });
-
             }
             //app.UseHttpsRedirection();
 
@@ -184,17 +182,17 @@ namespace VoxFox
             });
         }
 
-        private static void ConfigureDatabase(WebApplicationBuilder builder)
-        {
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
+        // private static void ConfigureDatabase(WebApplicationBuilder builder)
+        // {
+        //     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
 
-            builder.Services.AddDbContext<ApplicationContext>(options =>
-                options
-                    .UseNpgsql(connectionString, o =>
-                        o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
+        //     builder.Services.AddDbContext<ApplicationContext>(options =>
+        //         options
+        //             .UseNpgsql(connectionString, o =>
+        //                 o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
 
-            builder.Services.AddHostedService<MigrationHostedService>();
-            // builder.Services.AddHostedService<DatabaseInitializerService>();
-        }
+        //     builder.Services.AddHostedService<MigrationHostedService>();
+        //     // builder.Services.AddHostedService<DatabaseInitializerService>();
+        // }
     }
 }
