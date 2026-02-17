@@ -88,7 +88,7 @@ namespace VoxFox
 
             // builder.Services.AddScoped<IJwtService, JwtService>();
 
-            ConfigureDatabase(builder);
+            // ConfigureDatabase(builder);
 
             builder.Services.AddScoped<ICourseRepository, CourseRepository>();
             builder.Services.AddScoped<ICourseService, CourseService>();
@@ -184,17 +184,17 @@ namespace VoxFox
             });
         }
 
-        private static void ConfigureDatabase(WebApplicationBuilder builder)
-        {
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
+        // private static void ConfigureDatabase(WebApplicationBuilder builder)
+        // {
+        //     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
 
-            builder.Services.AddDbContext<ApplicationContext>(options =>
-                options
-                    .UseNpgsql(connectionString, o =>
-                        o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
+        //     builder.Services.AddDbContext<ApplicationContext>(options =>
+        //         options
+        //             .UseNpgsql(connectionString, o =>
+        //                 o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
 
-            builder.Services.AddHostedService<MigrationHostedService>();
-            // builder.Services.AddHostedService<DatabaseInitializerService>();
-        }
+        //     builder.Services.AddHostedService<MigrationHostedService>();
+        //     // builder.Services.AddHostedService<DatabaseInitializerService>();
+        // }
     }
 }
