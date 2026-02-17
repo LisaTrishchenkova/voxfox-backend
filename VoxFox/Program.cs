@@ -98,14 +98,13 @@ namespace VoxFox
             app.UseCors("AllowFrontend");
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "VoxFox API V1");
-                    // c.RoutePrefix = string.Empty;
-                    // c.EnablePersistAuthorization();
+                    c.RoutePrefix = "swagger";
                 });
 
                 app.UseReDoc(o =>
@@ -115,7 +114,6 @@ namespace VoxFox
                     o.RoutePrefix = "api-docs";
 
                 });
-
             }
             //app.UseHttpsRedirection();
 
