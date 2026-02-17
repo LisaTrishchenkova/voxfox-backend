@@ -188,7 +188,7 @@ namespace VoxFox
         {
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
 
-            builder.Services.AddDbContext<Models.Entities.ApplicationContext>(options =>
+            builder.Services.AddDbContext<ApplicationContext>(options =>
                 options
                     .UseNpgsql(connectionString, o =>
                         o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
