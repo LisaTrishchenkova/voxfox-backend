@@ -57,7 +57,8 @@ namespace VoxFox.Controllers
             {
                 var course = await _courseService.GetCourseByIdAsync(id);
                 if (course == null)
-                    return NotFound();
+                    return NotFound($"Не найден курс по id: {id}");
+
                 return Ok(course);
             }
             catch (System.Exception ex)
@@ -73,9 +74,10 @@ namespace VoxFox.Controllers
             [FromRoute] Guid id
         )
         {
-            var resualt = await _courseService.DeleteCourseAsync(id);
-            if (!resualt)
-                return NotFound();
+            var resultDeleted = await _courseService.DeleteCourseAsync(id);
+            if (!resultDeleted)
+                return NotFound($"Не удалось удалить курс по id: {id}");
+
             return NoContent();
         }
 
@@ -87,10 +89,11 @@ namespace VoxFox.Controllers
             [FromBody] UpdateCourseDto updateCourseDto
         )
         {
-            var course = await _courseService.UpdateCourseAsync(id, updateCourseDto);
-            if (course == null)
-                return NotFound();
-            return Ok(course);
+            var courseUpdated = await _courseService.UpdateCourseAsync(id, updateCourseDto);
+            if (courseUpdated == null)
+                return NotFound($"Не удалось обновить курс по id: {id}");
+
+            return Ok(courseUpdated);
         }
 
         // [HttpPatch("{id}")]
@@ -113,24 +116,6 @@ namespace VoxFox.Controllers
         //     if (!string.IsNullOrEmpty(request.Tags))
         //         course.Tags = request.Tags;
         //     return NoContent();
-        // }
-
-        // private Course? GetCourseFromCursesById(Guid id)
-        // {
-        //     var course = courses.FirstOrDefault(c => c.Id == id);
-        //     return course;
-        // }
-
-        // private CourseTestResponse ConvertToCourseResponse(Course course)
-        // {
-        //     var courseResponse = new CourseTestResponse
-        //     {
-        //         Id = course.Id,
-        //         Title = course.Title,
-        //         Description = course.Description,
-        //         Tags = course.Tags
-        //     };
-        //     return courseResponse;
         // }
     }
 }
