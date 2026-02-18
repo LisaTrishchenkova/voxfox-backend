@@ -102,6 +102,16 @@ namespace VoxFox
                 Environment = app.Environment.EnvironmentName
             });
 
+            app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+
+            app.MapGet("/health", () => new
+            {
+                Status = "healthy",
+                Version = Environment.GetEnvironmentVariable("APP_VERSION"),
+                // Database = CheckDatabase() ? "connected" : "disconnected",
+                Timestamp = DateTime.UtcNow
+            });
+
             if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
                 app.UseSwagger();
