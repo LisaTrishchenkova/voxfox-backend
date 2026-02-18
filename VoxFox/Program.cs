@@ -62,7 +62,6 @@ namespace VoxFox
                 //     Scheme = "Bearer"
                 // });
 
-
                 // c.AddSecurityRequirement(new OpenApiSecurityRequirement()
                 // {
                 //     {
@@ -88,16 +87,31 @@ namespace VoxFox
 
             // builder.Services.AddScoped<IJwtService, JwtService>();
 
-            // ConfigureDatabase(builder);
+            ConfigureDatabase(builder);
 
-            // builder.Services.AddScoped<ICourseRepository, CourseRepository>();
-            // builder.Services.AddScoped<ICourseService, CourseService>();
+            builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+            builder.Services.AddScoped<ICourseService, CourseService>();
             var app = builder.Build();
 
             app.UseRouting();
             app.UseCors("AllowFrontend");
 
-            // Configure the HTTP request pipeline.
+            app.MapGet("/version", () => new
+            {
+                Version = Environment.GetEnvironmentVariable("APP_VERSION"),
+                Environment = app.Environment.EnvironmentName
+            });
+
+            app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+
+            app.MapGet("/health", () => new
+            {
+                Status = "healthy",
+                Version = Environment.GetEnvironmentVariable("APP_VERSION"),
+                // Database = CheckDatabase() ? "connected" : "disconnected",
+                Timestamp = DateTime.UtcNow
+            });
+
             if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
                 app.UseSwagger();
@@ -114,11 +128,19 @@ namespace VoxFox
                     o.RoutePrefix = "api-docs";
 
                 });
+
+                app.MapGet("/debug", () => new
+                {
+                    Commit = Environment.GetEnvironmentVariable("GIT_COMMIT"),
+                    BuildDate = Environment.GetEnvironmentVariable("BUILD_DATE"),
+                    AllEnvVars = Environment.GetEnvironmentVariables()
+                });
             }
             //app.UseHttpsRedirection();
 
             // app.UseAuthentication();
             // app.UseAuthorization();
+
 
 
             app.MapControllers();
@@ -182,17 +204,17 @@ namespace VoxFox
             });
         }
 
-        // private static void ConfigureDatabase(WebApplicationBuilder builder)
-        // {
-        //     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
+        private static void ConfigureDatabase(WebApplicationBuilder builder)
+        {
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
 
-        //     builder.Services.AddDbContext<ApplicationContext>(options =>
-        //         options
-        //             .UseNpgsql(connectionString, o =>
-        //                 o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
+            builder.Services.AddDbContext<ApplicationContext>(options =>
+                options
+                    .UseNpgsql(connectionString, o =>
+                        o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));
 
-        //     builder.Services.AddHostedService<MigrationHostedService>();
-        //     // builder.Services.AddHostedService<DatabaseInitializerService>();
-        // }
+            builder.Services.AddHostedService<MigrationHostedService>();
+            // builder.Services.AddHostedService<DatabaseInitializerService>();
+        }
     }
 }
