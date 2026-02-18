@@ -62,7 +62,6 @@ namespace VoxFox
                 //     Scheme = "Bearer"
                 // });
 
-
                 // c.AddSecurityRequirement(new OpenApiSecurityRequirement()
                 // {
                 //     {
