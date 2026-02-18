@@ -32,7 +32,6 @@ namespace VoxFox
                   });
           });
 
-
             // Add services to the container.
 
             builder.Services.AddControllers();
