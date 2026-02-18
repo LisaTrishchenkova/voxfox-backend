@@ -11,10 +11,7 @@ using VoxFox.Interfaces;
 using VoxFox.Services;
 using VoxFox.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Threading.Tasks;
+
 namespace VoxFox
 {
     public class Program
@@ -65,7 +62,6 @@ namespace VoxFox
                 //     Scheme = "Bearer"
                 // });
 
-
                 // c.AddSecurityRequirement(new OpenApiSecurityRequirement()
                 // {
                 //     {
@@ -100,15 +96,29 @@ namespace VoxFox
             app.UseRouting();
             app.UseCors("AllowFrontend");
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            app.MapGet("/version", () => new
+            {
+                Version = Environment.GetEnvironmentVariable("APP_VERSION"),
+                Environment = app.Environment.EnvironmentName
+            });
+
+            app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+
+            app.MapGet("/health", () => new
+            {
+                Status = "healthy",
+                Version = Environment.GetEnvironmentVariable("APP_VERSION"),
+                // Database = CheckDatabase() ? "connected" : "disconnected",
+                Timestamp = DateTime.UtcNow
+            });
+
+            if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "VoxFox API V1");
-                    // c.RoutePrefix = string.Empty;
-                    // c.EnablePersistAuthorization();
+                    c.RoutePrefix = "swagger";
                 });
 
                 app.UseReDoc(o =>
@@ -119,11 +129,18 @@ namespace VoxFox
 
                 });
 
+                app.MapGet("/debug", () => new
+                {
+                    Commit = Environment.GetEnvironmentVariable("GIT_COMMIT"),
+                    BuildDate = Environment.GetEnvironmentVariable("BUILD_DATE"),
+                    AllEnvVars = Environment.GetEnvironmentVariables()
+                });
             }
             //app.UseHttpsRedirection();
 
             // app.UseAuthentication();
             // app.UseAuthorization();
+
 
 
             app.MapControllers();
@@ -191,7 +208,7 @@ namespace VoxFox
         {
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Database connection string is not configured.");
 
-            builder.Services.AddDbContext<Models.Entities.ApplicationContext>(options =>
+            builder.Services.AddDbContext<ApplicationContext>(options =>
                 options
                     .UseNpgsql(connectionString, o =>
                         o.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName)));

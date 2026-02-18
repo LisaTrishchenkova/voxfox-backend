@@ -1,4 +1,4 @@
-name: Release to Staging
+name: Build and Push Backend to ECR (STAGING)
 
 env:
   AWS_REGION: eu-north-1
@@ -8,11 +8,11 @@ env:
 on:
   push:
     branches:
-      - staging # или release/*
+      - staging
   workflow_dispatch:
     inputs:
       version_type:
-        description: "Тип версии"
+        description: "Type version"
         required: true
         default: "patch"
         type: choice
@@ -22,7 +22,7 @@ on:
           - major
 
 jobs:
-  release:
+  staging:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -58,7 +58,7 @@ jobs:
           VERSION_TAG: ${{ steps.version.outputs.new-tag }}
         run: |
           docker build \
-            --target production \  # или специальный staging target
+            --target staging \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
             -f Dockerfile .
