@@ -65,11 +65,13 @@ jobs:
             --target staging \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest \
             --load \
             -f Dockerfile .
 
           # Push to ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging
 
           # Cleanup
