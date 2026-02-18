@@ -96,7 +96,12 @@ namespace VoxFox
             app.UseRouting();
             app.UseCors("AllowFrontend");
 
-            // Configure the HTTP request pipeline.
+            app.MapGet("/version", () => new
+            {
+                Version = Environment.GetEnvironmentVariable("APP_VERSION"),
+                Environment = app.Environment.EnvironmentName
+            });
+
             if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
                 app.UseSwagger();
@@ -113,11 +118,20 @@ namespace VoxFox
                     o.RoutePrefix = "api-docs";
 
                 });
+
+                app.MapGet("/debug", () => new
+                {
+                    Commit = Environment.GetEnvironmentVariable("GIT_COMMIT"),
+                    BuildDate = Environment.GetEnvironmentVariable("BUILD_DATE"),
+                    AllEnvVars = Environment.GetEnvironmentVariables()
+                });
             }
             //app.UseHttpsRedirection();
 
             // app.UseAuthentication();
             // app.UseAuthorization();
+
+
 
             app.MapControllers();
 
