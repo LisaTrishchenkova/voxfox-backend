@@ -8,7 +8,7 @@ env:
 on:
   push:
     tags:
-      - "v*" # Только теги вида v1.2.3
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
@@ -18,7 +18,7 @@ on:
 
 permissions:
   id-token: write
-  contents: write # Нужно для создания тегов
+  contents: write
 
 jobs:
   version:
@@ -84,16 +84,24 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ needs.version.outputs.tag }}
         run: |
-          # Build production image
-          docker build \
+          # Setup buildx
+          docker buildx create --use --name builder
+          docker buildx inspect builder --bootstrap
+
+          # Build with buildx
+          docker buildx build \
             --target production \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            --load \
             -f Dockerfile .
 
           # Push to ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          # Cleanup
+          docker buildx rm builder
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
