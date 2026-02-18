@@ -60,14 +60,20 @@ jobs:
           GIT_COMMIT: ${{ steps.tag.outputs.commit }}
           BUILD_DATE: ${{ steps.tag.outputs.build_date }}
         run: |
-          docker build \
+          docker buildx create --use --name builder
+          docker buildx inspect builder --bootstrap
+
+          docker buildx build \
             --target development \
             --build-arg APP_VERSION=${APP_VERSION} \
             --build-arg GIT_COMMIT=${GIT_COMMIT} \
             --build-arg BUILD_DATE=${BUILD_DATE} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest-dev \
+            --load \
             -f Dockerfile .
 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest-dev
+
+          docker buildx rm builder
