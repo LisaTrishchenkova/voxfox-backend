@@ -21,29 +21,41 @@ permissions:
   contents: write
 
 jobs:
-  version:
+  get-version:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     outputs:
-      tag: ${{ steps.version.outputs.new-tag }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create version tag
+      - name: Determine version
         id: version
         run: |
-          if [[ "${{ github.event.inputs.version }}" != "" ]]; then
-            echo "new-tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # For tag push events, extract tag name from ref
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "Version from tag: $TAG"
           else
-            echo "No version specified" && exit 1
+            # For manual dispatch
+            TAG="${{ github.event.inputs.version }}"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "Version from input: $TAG"
+          fi
+
+      - name: Validate version format
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $TAG. Must be v1.2.3"
+            exit 1
           fi
 
   build-and-push:
-    needs: version
+    needs: get-version
     runs-on: ubuntu-latest
     environment: production
 
@@ -51,7 +63,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ needs.get-version.outputs.tag }}
           fetch-depth: 2
 
       - name: Setup .NET
@@ -82,13 +94,11 @@ jobs:
       - name: Build and push PRODUCTION image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ needs.version.outputs.tag }}
+          IMAGE_TAG: ${{ needs.get-version.outputs.tag }}
         run: |
-          # Setup buildx
           docker buildx create --use --name builder
           docker buildx inspect builder --bootstrap
 
-          # Build with buildx
           docker buildx build \
             --target production \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
@@ -96,15 +106,13 @@ jobs:
             --load \
             -f Dockerfile .
 
-          # Push to ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-          # Cleanup
           docker buildx rm builder
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.version.outputs.tag }}
+          tag_name: ${{ needs.get-version.outputs.tag }}
           generate_release_notes: true
