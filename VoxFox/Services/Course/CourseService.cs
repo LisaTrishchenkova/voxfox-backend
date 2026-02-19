@@ -1,3 +1,4 @@
+using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
 public class CourseService : ICourseService
@@ -15,7 +16,11 @@ public class CourseService : ICourseService
         {
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
-            Tags = createCourseDto.Tags
+            Tags = createCourseDto.Tags.Select(tagDto => new Tag
+            {
+                Id = Guid.NewGuid(),
+                Name = tagDto.Name
+            }).ToList()
         };
 
         var createdCourse = await _courseRepository.AddAsync(course);
@@ -69,7 +74,11 @@ public class CourseService : ICourseService
 
         course.Title = updateCourseDto.Title ?? course.Title;
         course.Description = updateCourseDto.Description ?? course.Description;
-        course.Tags = updateCourseDto.Tags ?? course.Tags;
+        course.Tags = updateCourseDto.Tags.Select(tagDto => new Tag
+        {
+            Name = tagDto.Name,
+            CourseId = course.Id
+        }).ToList();
 
         var updateCourse = await _courseRepository.UpdateAsync(course);
 
@@ -83,7 +92,10 @@ public class CourseService : ICourseService
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
-            Tags = course.Tags
+            Tags = course.Tags.Select(t => new TagDto
+            {
+                Name = t.Name
+            }).ToList()
         };
     }
 }

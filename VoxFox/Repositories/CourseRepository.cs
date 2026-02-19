@@ -70,6 +70,7 @@ public class CourseRepository : ICourseRepository
         try
         {
             var course = await _context.Courses
+                .Include(c => c.Tags)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             return course;

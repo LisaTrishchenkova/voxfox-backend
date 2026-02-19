@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using VoxFox.Models.DTOs;
+using VoxFox.Models.Entities;
 public class CreateCourseDto
 {
     [Required]
@@ -8,7 +10,5 @@ public class CreateCourseDto
     [Required]
     [MinLength(10)]
     public string Description { get; set; } = null!;
-
-    [MinLength(8)]
-    public string Tags { get; set; } = null!;
+    public ICollection<TagDto> Tags { get; set; } = new List<TagDto>();
 }
