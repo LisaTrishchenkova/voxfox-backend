@@ -1,3 +1,4 @@
+using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
 public class CourseService : ICourseService
@@ -15,10 +16,18 @@ public class CourseService : ICourseService
         {
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
-            Tags = createCourseDto.Tags
+            Tags = createCourseDto.Tags.Select(tagDto => new Tag
+            {
+                Id = Guid.NewGuid(),
+                Name = tagDto.Name
+            }).ToList()
         };
 
         var createdCourse = await _courseRepository.AddAsync(course);
+        if (createdCourse == null)
+        {
+            throw new Exception("Не удалось добавить курс");
+        }
 
         return MapToDo(createdCourse);
     }
@@ -27,9 +36,7 @@ public class CourseService : ICourseService
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-        {
             return false;
-        }
 
         var isSuccess = await _courseRepository.DeleteAsync(course);
         return isSuccess;
@@ -38,26 +45,43 @@ public class CourseService : ICourseService
     public async Task<IReadOnlyCollection<CourseDto>> GetAllCoursesAsync()
     {
         var courses = await _courseRepository.GetAllAsync();
-        return courses.Select(course => MapToDo(course)).ToList();
+        if (courses == null)
+            throw new Exception("Не удалось получить список курсов");
+
+        var coursesDTO = courses
+            .Select(MapToDo)
+            .ToList();
+
+        return coursesDTO;
     }
 
-    public async Task<CourseDto> GetCourseByIdAsync(Guid id)
+    public async Task<CourseDto?> GetCourseByIdAsync(Guid id)
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
             return null;
-        return MapToDo(course);
+
+        var courseDTO = MapToDo(course);
+
+        return courseDTO;
     }
 
     public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto)
     {
-        var existingCourse = await _courseRepository.GetByIdAsync(id);
-        if (existingCourse == null)
-            return null;
-        existingCourse.Title = updateCourseDto.Title;
-        existingCourse.Description = updateCourseDto.Description;
-        existingCourse.Tags = updateCourseDto.Tags;
-        var updateCourse = await _courseRepository.UpdateAsync(existingCourse);
+        var course = await _courseRepository.GetByIdAsync(id);
+        if (course == null)
+            throw new Exception($"Не удалось получить курс по id: {id}");
+
+        course.Title = updateCourseDto.Title ?? course.Title;
+        course.Description = updateCourseDto.Description ?? course.Description;
+        course.Tags = updateCourseDto.Tags.Select(tagDto => new Tag
+        {
+            Name = tagDto.Name,
+            CourseId = course.Id
+        }).ToList();
+
+        var updateCourse = await _courseRepository.UpdateAsync(course);
+
         return MapToDo(updateCourse);
     }
 
@@ -68,7 +92,10 @@ public class CourseService : ICourseService
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
-            Tags = course.Tags
+            Tags = course.Tags.Select(t => new TagDto
+            {
+                Name = t.Name
+            }).ToList()
         };
     }
 }
