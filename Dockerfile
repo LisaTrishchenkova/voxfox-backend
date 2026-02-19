@@ -1,4 +1,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+
+# ============ VERSIONING ============
+ARG APP_VERSION
+ARG GIT_COMMIT
+ARG BUILD_DATE
+
+ENV APP_VERSION=${APP_VERSION:-unknown}
+ENV GIT_COMMIT=${GIT_COMMIT:-unknown}
+ENV BUILD_DATE=${BUILD_DATE:-unknown}
+# ========================================
+
 WORKDIR /src
 
 COPY VoxFox/*.csproj ./VoxFox/
@@ -14,6 +25,15 @@ RUN dotnet clean && \
 
 # ============ DEVELOPMENT ============
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS development
+
+ARG APP_VERSION
+ARG GIT_COMMIT
+ARG BUILD_DATE
+
+ENV APP_VERSION=${APP_VERSION:-unknown}
+ENV GIT_COMMIT=${GIT_COMMIT:-unknown}
+ENV BUILD_DATE=${BUILD_DATE:-unknown}
+
 WORKDIR /src
 COPY . .
 ENV ASPNETCORE_ENVIRONMENT=Development
@@ -22,12 +42,30 @@ ENTRYPOINT ["dotnet", "watch", "run", "--project", "VoxFox", "--no-launch-profil
 
 # ============ TESTING ============
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS testing
+
+ARG APP_VERSION
+ARG GIT_COMMIT
+ARG BUILD_DATE
+
+ENV APP_VERSION=${APP_VERSION:-unknown}
+ENV GIT_COMMIT=${GIT_COMMIT:-unknown}
+ENV BUILD_DATE=${BUILD_DATE:-unknown}
+
 WORKDIR /src
 COPY . .
 RUN dotnet test --configuration Release --verbosity normal --no-restore
 
 # ============ STAGING ============
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS staging
+
+ARG APP_VERSION
+ARG GIT_COMMIT
+ARG BUILD_DATE
+
+ENV APP_VERSION=${APP_VERSION:-unknown}
+ENV GIT_COMMIT=${GIT_COMMIT:-unknown}
+ENV BUILD_DATE=${BUILD_DATE:-unknown}
+
 WORKDIR /app
 COPY --from=build /app/publish .
 
@@ -52,6 +90,15 @@ ENTRYPOINT ["dotnet", "VoxFox.dll"]
 
 # ============ PRODUCTION ============
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS production
+
+ARG APP_VERSION
+ARG GIT_COMMIT
+ARG BUILD_DATE
+
+ENV APP_VERSION=${APP_VERSION:-unknown}
+ENV GIT_COMMIT=${GIT_COMMIT:-unknown}
+ENV BUILD_DATE=${BUILD_DATE:-unknown}
+
 WORKDIR /app
 COPY --from=build /app/publish .
 
