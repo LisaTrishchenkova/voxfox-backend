@@ -69,11 +69,11 @@ jobs:
             --build-arg GIT_COMMIT=${GIT_COMMIT} \
             --build-arg BUILD_DATE=${BUILD_DATE} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest-dev \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest \
             --load \
             -f Dockerfile .
 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest-dev
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest
 
           docker buildx rm builder
