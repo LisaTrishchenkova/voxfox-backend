@@ -1,14 +1,12 @@
-using System.Collections;
-
 namespace VoxFox.Models.Entities
 {
-    public class Course
+    public class Section
     {
         public Guid Id { get; set; }
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
+        public Guid CourseId { get; set; }
 
-        public ICollection<Tag>? Tags { get; set; } = null!;
-        public ICollection<Section> Sections { get; set; } = null!;
+        public Course Course { get; set; } = null!;
     }
 }

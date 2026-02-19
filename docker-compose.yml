@@ -16,6 +16,7 @@
 
   postgres:
     image: postgres:15
+    restart: unless-stopped
     environment:
       - POSTGRES_DB=voxfox_db
       - POSTGRES_USER=postgres
