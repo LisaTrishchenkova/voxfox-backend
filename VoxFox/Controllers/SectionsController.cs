@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualBasic;
 using System.ComponentModel.DataAnnotations;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
@@ -95,9 +96,16 @@ namespace VoxFox.Controllers
             [FromRoute] Guid id
         )
         {
-            var resultDeleted = await _sectionService.DeleteSectionsAsync(id);
-            if (!resultDeleted)
-                return NotFound($"Не удалось удалить раздел по id: {id}");
+            var result = await _sectionService.DeleteSectionAsync(id);
+
+            if (!result.Success)
+                return StatusCode(result.StatusCode ?? 400, result.Message);
+
+            // TODO: Удалить позже после того как не нужно будет
+            // var resultDeleted = await _sectionService.DeleteSectionsAsync(id);
+
+            // if (!resultDeleted)
+            //     return NotFound($"Не удалось удалить раздел по id: {id}");
 
             return NoContent();
         }

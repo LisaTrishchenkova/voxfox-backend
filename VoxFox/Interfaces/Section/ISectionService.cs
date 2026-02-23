@@ -12,5 +12,6 @@ namespace VoxFox.Interfaces.Section
         Task<SectionDto> UpdateSectionAsync(Guid id, UpdateSectionDto updateSectionDto);
         Task<bool> DeleteSectionsAsync(Guid id);
         Task<IList<SectionDto>> GetSectionsByCourseIdAsync(Guid courseId);
+        Task<ServiceResult<bool>> DeleteSectionAsync(Guid id);
     }
 }

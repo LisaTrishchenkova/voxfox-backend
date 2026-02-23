@@ -37,6 +37,18 @@ namespace VoxFox.Services
             return MapToDo(createSection);
         }
 
+        public async Task<ServiceResult<bool>> DeleteSectionAsync(Guid id)
+        {
+            var section = await _sectionRepository.GetByIdAsync(id);
+            if (section == null)
+                return ServiceResult<bool>.Fail($"Раздел с id: {id} не найден", statusCode: StatusCodes.Status404NotFound);
+
+            var isSuccess = await _sectionRepository.DeleteAsync(section);
+            if (!isSuccess)
+                return ServiceResult<bool>.Fail($"Не удалось удалить раздел по id: {id}", StatusCodes.Status500InternalServerError);
+
+            return ServiceResult<bool>.Ok(true);
+        }
 
         public async Task<bool> DeleteSectionsAsync(Guid id)
         {
@@ -87,7 +99,7 @@ namespace VoxFox.Services
 
         public async Task<SectionDto> UpdateSectionAsync(Guid id, UpdateSectionDto updateSectionDto)
         {
-             var section = await _sectionRepository.GetByIdAsync(id);
+            var section = await _sectionRepository.GetByIdAsync(id);
             if (section == null)
             {
                 throw new KeyNotFoundException($"Раздел с id: {id} не найден");
@@ -104,6 +116,7 @@ namespace VoxFox.Services
 
             return MapToDo(updatedSection);
         }
+
         private SectionDto MapToDo(Section section)
         {
             return new SectionDto
