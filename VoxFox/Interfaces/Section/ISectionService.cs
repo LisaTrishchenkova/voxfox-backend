@@ -1,6 +1,4 @@
-using System.Collections;
 using VoxFox.Models.DTOs;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace VoxFox.Interfaces.Section
 {
