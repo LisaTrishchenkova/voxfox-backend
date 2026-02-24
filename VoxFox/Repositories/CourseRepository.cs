@@ -97,4 +97,22 @@ public class CourseRepository : ICourseRepository
             throw;
         }
     }
+
+    public async Task<IList<Section>> GetSectionsByCourseIdAsync(Guid courseId)
+    {
+        try
+        {
+            var courses = await _context.Sections
+                .Where(s => s.CourseId == courseId)
+                .ToListAsync();
+
+            return courses;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex.Message);
+            throw;
+        }
+
+    }
 }

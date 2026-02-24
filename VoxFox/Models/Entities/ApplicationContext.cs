@@ -51,6 +51,9 @@ namespace VoxFox.Models.Entities
                     .HasMaxLength(200);
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
+
+                entity.Property(e => e.Id)
+                    .HasColumnType("uuid");
             }
             );
 
@@ -62,6 +65,9 @@ namespace VoxFox.Models.Entities
                     .HasMaxLength(200);
                 entity.Property(e => e.Description)
                     .IsRequired();
+
+                entity.Property(e => e.CourseId)
+                    .HasColumnType("uuid");
             }
             );
 

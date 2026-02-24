@@ -1,5 +1,3 @@
-using System.Collections;
-
 namespace VoxFox.Models.Entities
 {
     public class Course
