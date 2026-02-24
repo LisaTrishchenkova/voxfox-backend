@@ -1,4 +1,5 @@
 
+using System.Collections;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
@@ -14,40 +15,67 @@ namespace VoxFox.Services
             _sectionRepository = sectionRepository;
         }
 
-        public async Task<SectionDto> CreateSectionAsync(Guid courseId, CreateSectionDto createSectionDto)
+        public async Task<ServiceResult<SectionDto>> CreateSectionAsync(Guid courseId, CreateSectionDto createSectionDto)
         {
-            if (!await _sectionRepository.CourseExistsAsync(courseId))
+            try
             {
-                throw new KeyNotFoundException($"Курс с id: {courseId} не найден");
+                var newSection = await _sectionRepository.CourseExistsAsync(courseId);
+                if (!newSection)
+                {
+                    return ServiceResult<SectionDto>.Fail(
+                        $"Курс с id: {courseId} не найден",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                var section = new Section
+                {
+                    Title = createSectionDto.Title,
+                    Description = createSectionDto.Description,
+                    CourseId = courseId
+                };
+
+                var createSection = await _sectionRepository.AddAsync(section);
+                if (createSection == null)
+                {
+                    return ServiceResult<SectionDto>.Fail(
+                        $"Не удалось создать раздел",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                return ServiceResult<SectionDto>.Created(MapToDo(createSection));
             }
-
-            var section = new Section
+            catch (System.Exception ex)
             {
-                Title = createSectionDto.Title,
-                Description = createSectionDto.Description,
-                CourseId = courseId
-            };
-
-            var createSection = await _sectionRepository.AddAsync(section);
-            if (createSection == null)
-            {
-                throw new Exception("Не удалось добавить раздел");
+                return ServiceResult<SectionDto>.Fail(
+                    $"Ошибка при создании раздела: {ex.Message}",
+                    StatusCodes.Status500InternalServerError
+                );
             }
-
-            return MapToDo(createSection);
         }
 
         public async Task<ServiceResult<bool>> DeleteSectionAsync(Guid id)
         {
-            var section = await _sectionRepository.GetByIdAsync(id);
-            if (section == null)
-                return ServiceResult<bool>.Fail($"Раздел с id: {id} не найден", statusCode: StatusCodes.Status404NotFound);
+            try
+            {
+                var section = await _sectionRepository.GetByIdAsync(id);
+                if (section == null)
+                    return ServiceResult<bool>.Fail($"Раздел с id: {id} не найден", statusCode: StatusCodes.Status404NotFound);
 
-            var isSuccess = await _sectionRepository.DeleteAsync(section);
-            if (!isSuccess)
-                return ServiceResult<bool>.Fail($"Не удалось удалить раздел по id: {id}", StatusCodes.Status500InternalServerError);
+                var isSuccess = await _sectionRepository.DeleteAsync(section);
+                if (!isSuccess)
+                    return ServiceResult<bool>.Fail($"Не удалось удалить раздел по id: {id}", StatusCodes.Status500InternalServerError);
 
-            return ServiceResult<bool>.Ok(true);
+                return ServiceResult<bool>.Ok(true, "Раздел успешно удален");
+            }
+            catch (System.Exception ex)
+            {
+                return ServiceResult<bool>.Fail(
+                     $"Ошибка при удалении раздела: {ex.Message}",
+                     StatusCodes.Status500InternalServerError
+                );
+            }
         }
 
         public async Task<bool> DeleteSectionsAsync(Guid id)
@@ -60,61 +88,92 @@ namespace VoxFox.Services
             return isSuccess;
         }
 
-        public async Task<IReadOnlyCollection<SectionDto>> GetAllSectionsAsync()
+        public async Task<ServiceResult<IReadOnlyCollection<SectionDto>>> GetAllSectionsAsync()
         {
-            var sections = await _sectionRepository.GetAllAsync();
-            if (sections == null)
+            try
             {
-                throw new Exception("Не удалось получить список разделов");
+                var sections = await _sectionRepository.GetAllAsync();
+                if (sections == null)
+                {
+                    return ServiceResult<IReadOnlyCollection<SectionDto>>.Fail(
+                        "Не удалось получить список разделов",
+                        StatusCodes.Status500InternalServerError
+                    );
+                }
+
+                var sectionDTO = sections
+                    .Select(MapToDo)
+                    .ToList();
+
+                return ServiceResult<IReadOnlyCollection<SectionDto>>.Ok(sectionDTO);
             }
-
-            var sectionDTO = sections
-                .Select(MapToDo)
-                .ToList();
-
-            return sectionDTO;
+            catch (System.Exception ex)
+            {
+                return ServiceResult<IReadOnlyCollection<SectionDto>>.Fail(
+                    $"Ошибка при получении списка разделов: {ex.Message}",
+                    StatusCodes.Status500InternalServerError
+                );
+            }
         }
 
-        public async Task<SectionDto?> GetSectionByIdAsync(Guid id)
+        public async Task<ServiceResult<SectionDto?>> GetSectionByIdAsync(Guid id)
         {
-            var section = await _sectionRepository.GetByIdAsync(id);
-            if (section == null)
-                return null;
+            try
+            {
+                var section = await _sectionRepository.GetByIdAsync(id);
+                if (section == null)
+                {
+                    return ServiceResult<SectionDto?>.Fail(
+                        $"Раздел с id: {id} не найден",
+                        StatusCodes.Status404NotFound
+                    );
+                }
 
-            var sectionDto = MapToDo(section);
-
-            return sectionDto;
+                return ServiceResult<SectionDto?>.Ok(MapToDo(section));
+            }
+            catch (System.Exception ex)
+            {
+                return ServiceResult<SectionDto?>.Fail(
+                    $"Ошибка при получении раздела: {ex.Message}",
+                    StatusCodes.Status500InternalServerError
+                );
+            }
         }
 
-        public async Task<IList<SectionDto>> GetSectionsByCourseIdAsync(Guid courseId)
+        public async Task<ServiceResult<SectionDto>> UpdateSectionAsync(Guid id, UpdateSectionDto updateSectionDto)
         {
-            var sections = await _sectionRepository.GetByCourseIdAsync(courseId);
-            if (sections == null || !sections.Any())
+            try
             {
-                return new List<SectionDto>();
+                var section = await _sectionRepository.GetByIdAsync(id);
+                if (section == null)
+                {
+                    return ServiceResult<SectionDto>.Fail(
+                        $"Раздел с id: {id} не найден",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                section.Title = updateSectionDto.Title ?? section.Title;
+                section.Description = updateSectionDto.Description ?? section.Description;
+
+                var updatedSection = await _sectionRepository.UpdateAsync(section);
+                if (updatedSection == null)
+                {
+                    return ServiceResult<SectionDto>.Fail(
+                        "Не удалось обновить раздел",
+                        StatusCodes.Status500InternalServerError
+                    );
+                }
+
+                return ServiceResult<SectionDto>.Ok(MapToDo(updatedSection), "Раздел успешно обновлен");
             }
-
-            return sections.Select(MapToDo).ToList();
-        }
-
-        public async Task<SectionDto> UpdateSectionAsync(Guid id, UpdateSectionDto updateSectionDto)
-        {
-            var section = await _sectionRepository.GetByIdAsync(id);
-            if (section == null)
+            catch (System.Exception ex)
             {
-                throw new KeyNotFoundException($"Раздел с id: {id} не найден");
+                return ServiceResult<SectionDto>.Fail(
+                    $"Ошибка при обновлении раздела: {ex.Message}",
+                    StatusCodes.Status500InternalServerError
+                );
             }
-
-            section.Title = updateSectionDto.Title ?? section.Title;
-            section.Description = updateSectionDto.Description ?? section.Description;
-
-            var updatedSection = await _sectionRepository.UpdateAsync(section);
-            if (updatedSection == null)
-            {
-                throw new Exception("Не удалось обновить раздел");
-            }
-
-            return MapToDo(updatedSection);
         }
 
         private SectionDto MapToDo(Section section)

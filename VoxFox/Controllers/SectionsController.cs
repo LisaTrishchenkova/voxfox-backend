@@ -18,6 +18,10 @@ namespace VoxFox.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(SectionDto))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<SectionDto>> CreateSection(
             Guid courseId,
             CreateSectionDto createSection
@@ -25,8 +29,17 @@ namespace VoxFox.Controllers
         {
             try
             {
-                var course = await _sectionService.CreateSectionAsync(courseId, createSection);
-                return CreatedAtAction(nameof(GetSectionById), new { id = course.Id }, course);
+                var result = await _sectionService.CreateSectionAsync(courseId, createSection);
+
+                if (!result.Success)
+                {
+                    return StatusCode(result.StatusCode ?? 400, result.Message);
+                }
+
+                return CreatedAtAction(
+                    nameof(GetSectionById),
+                    new { id = result.Data.Id },
+                    result.Data);
             }
             catch (System.Exception ex)
             {
@@ -35,53 +48,23 @@ namespace VoxFox.Controllers
             }
         }
 
-        // [HttpGet]
-        // [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(SectionDto))]
-        // public async Task<ActionResult<IList<SectionDto>>> GetAllSections()
-        // {
-        //     try
-        //     {
-        //         var sections = await _sectionService.GetAllSectionsAsync();
-        //         return Ok(sections);
-        //     }
-        //     catch (Exception)
-        //     {
-        //         return StatusCode(500, "Ошибка сервера");
-        //     }
-        // }
-
-        [HttpGet("course/{courseId}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<SectionDto>))]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<SectionDto>>> GetSectionsByCourseId(
-            [FromRoute, Required] Guid courseId
-        )
-        {
-            try
-            {
-                var sections = await _sectionService.GetSectionsByCourseIdAsync(courseId);
-                return Ok(sections);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
-        }
-
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(SectionDto))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<CourseDto>> GetSectionById(
             [FromRoute, Required] Guid id
         )
         {
             try
             {
-                var section = await _sectionService.GetSectionByIdAsync(id);
-                if (section == null)
-                    return NotFound($"Не найден раздел по id: {id}");
+                var result = await _sectionService.GetSectionByIdAsync(id);
+                if (!result.Success)
+                {
+                    return StatusCode(result.StatusCode ?? 404, result.Message);
+                }
 
-                return Ok(section);
+                return Ok(result.Data);
             }
             catch (System.Exception ex)
             {
@@ -92,37 +75,57 @@ namespace VoxFox.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteSectionById(
             [FromRoute] Guid id
         )
         {
-            var result = await _sectionService.DeleteSectionAsync(id);
+            try
+            {
+                var result = await _sectionService.DeleteSectionAsync(id);
+                if (!result.Success)
+                    return StatusCode(result.StatusCode ?? 400, result.Message);
 
-            if (!result.Success)
-                return StatusCode(result.StatusCode ?? 400, result.Message);
+                // TODO: Удалить позже после того как не нужно будет
+                // var resultDeleted = await _sectionService.DeleteSectionsAsync(id);
 
-            // TODO: Удалить позже после того как не нужно будет
-            // var resultDeleted = await _sectionService.DeleteSectionsAsync(id);
+                // if (!resultDeleted)
+                //     return NotFound($"Не удалось удалить раздел по id: {id}");
 
-            // if (!resultDeleted)
-            //     return NotFound($"Не удалось удалить раздел по id: {id}");
+                return NoContent();
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
 
-            return NoContent();
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<CourseDto>> UpdateSection(
             [FromRoute] Guid id,
             [FromBody] UpdateSectionDto updateSectionDto
         )
         {
-            var sectionUpdated = await _sectionService.UpdateSectionAsync(id, updateSectionDto);
-            if (sectionUpdated == null)
-                return NotFound($"Не удалось обновить раздел по id: {id}");
+            try
+            {
+                var result = await _sectionService.UpdateSectionAsync(id, updateSectionDto);
 
-            return Ok(sectionUpdated);
+                if (!result.Success)
+                {
+                    return StatusCode(result.StatusCode ?? 400, result.Message);
+                }
+
+                return Ok(result.Data);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }

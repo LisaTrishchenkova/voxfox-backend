@@ -6,12 +6,10 @@ namespace VoxFox.Interfaces.Section
 {
     public interface ISectionService
     {
-        Task<IReadOnlyCollection<SectionDto>> GetAllSectionsAsync();
-        Task<SectionDto?> GetSectionByIdAsync(Guid id);
-        Task<SectionDto> CreateSectionAsync(Guid courseId, CreateSectionDto createSectionDto);
-        Task<SectionDto> UpdateSectionAsync(Guid id, UpdateSectionDto updateSectionDto);
-        Task<bool> DeleteSectionsAsync(Guid id);
-        Task<IList<SectionDto>> GetSectionsByCourseIdAsync(Guid courseId);
+        Task<ServiceResult<IReadOnlyCollection<SectionDto>>> GetAllSectionsAsync();
+        Task<ServiceResult<SectionDto?>> GetSectionByIdAsync(Guid id);
+        Task<ServiceResult<SectionDto>> CreateSectionAsync(Guid courseId, CreateSectionDto createSectionDto);
+        Task<ServiceResult<SectionDto>> UpdateSectionAsync(Guid id, UpdateSectionDto updateSectionDto);
         Task<ServiceResult<bool>> DeleteSectionAsync(Guid id);
     }
 }

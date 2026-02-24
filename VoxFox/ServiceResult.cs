@@ -19,6 +19,17 @@ namespace VoxFox
             };
         }
 
+        public static ServiceResult<T> Created(T data, string? message = null)
+        {
+            return new ServiceResult<T>
+            {
+                Success = true,
+                Data = data,
+                Message = message,
+                StatusCode = StatusCodes.Status201Created
+            };
+        }
+
         public static ServiceResult<T> Fail(string message, int statusCode = 400)
         {
             return new ServiceResult<T>

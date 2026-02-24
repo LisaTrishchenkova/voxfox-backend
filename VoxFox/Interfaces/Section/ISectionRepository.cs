@@ -9,5 +9,4 @@ public interface ISectionRepository
     Task<Section> UpdateAsync(Section section);
     Task<bool> DeleteAsync(Section section);
     public Task<bool> CourseExistsAsync(Guid courseId);
-    Task<IList<Section>> GetByCourseIdAsync(Guid courseId);
 }
