@@ -1,4 +1,3 @@
-using System.Collections;
 using VoxFox.Models.Entities;
 
 public interface ISectionRepository
