@@ -8,6 +8,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Course> Courses { get; set; }
         public DbSet<Section> Sections { get; set; }
         public DbSet<Tag> Tags { get; set; }
+         public DbSet<Lesson> Lessons { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -26,6 +27,12 @@ namespace VoxFox.Models.Entities
                 .WithMany(c => c.Tags)
                 .HasForeignKey(t => t.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+             modelBuilder.Entity<Lesson>()
+                .HasOne(l => l.Section)
+                .WithMany(s => s.Lessons)
+                .HasForeignKey(l => l.SectionId)
+                .OnDelete(DeleteBehavior.Cascade); 
 
             modelBuilder.Entity<User>(entity =>
             {

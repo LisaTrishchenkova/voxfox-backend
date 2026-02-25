@@ -67,6 +67,23 @@ namespace VoxFox.Repositories
             }
         }
 
+        public async Task<IList<Lesson>> GetLessonBySectionIdAsync(Guid sectionId)
+        {
+        try
+        {
+            var lessons = await _context.Lessons
+                .Where(s => s.SectionId == sectionId)
+                .ToListAsync();
+
+            return lessons;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex.Message);
+            throw;
+        }
+        }
+
         public async Task<Section> UpdateAsync(Section section)
         {
             try

@@ -93,6 +93,8 @@ namespace VoxFox
             builder.Services.AddScoped<ICourseService, CourseService>();
             builder.Services.AddScoped<ISectionRepository, SectionRepository>();
             builder.Services.AddScoped<ISectionService, SectionService>();
+            builder.Services.AddScoped<ILessonRepository, LessonRepository>();
+            builder.Services.AddScoped<ILessonService, LessonService>();
             var app = builder.Build();
 
             app.UseRouting();

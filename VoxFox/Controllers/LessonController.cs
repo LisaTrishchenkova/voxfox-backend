@@ -3,33 +3,35 @@ using Microsoft.VisualBasic;
 using System.ComponentModel.DataAnnotations;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
+using VoxFox.Services;
 
 namespace VoxFox.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class SectionsController : ControllerBase
+    public class LessonController : ControllerBase
     {
-        //Зарегистрировать не забыть в Program.cs
-        private readonly ISectionService _sectionService;
-        public SectionsController(ISectionService sectionService)
+        //TODO: Зарегистрировать не забыть в Program.cs
+        private readonly ILessonService _lessonService;
+
+        public LessonController(ILessonService lessonService)
         {
-            _sectionService = sectionService;
+            _lessonService = lessonService;
         }
 
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(SectionDto))]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(LessonDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<SectionDto>> CreateSection(
-            Guid courseId,
-            CreateSectionDto createSection
+        public async Task<ActionResult<LessonDto>> CreateLesson(
+            Guid sectionId,
+            CreateLessonDto createLesson
         )
         {
             try
             {
-                var result = await _sectionService.CreateSectionAsync(courseId, createSection);
+                var result = await _lessonService.CreateLessonAsync(sectionId, createLesson);
 
                 if (!result.Success)
                 {
@@ -37,7 +39,7 @@ namespace VoxFox.Controllers
                 }
 
                 return CreatedAtAction(
-                    nameof(GetSectionById),
+                    nameof(GetLessonById),
                     new { id = result.Data.Id },
                     result.Data);
             }
@@ -49,16 +51,16 @@ namespace VoxFox.Controllers
         }
 
         [HttpGet("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(SectionDto))]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LessonDto))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<CourseDto>> GetSectionById(
+        public async Task<ActionResult<LessonDto>> GetLessonById(
             [FromRoute, Required] Guid id
         )
         {
             try
             {
-                var result = await _sectionService.GetSectionByIdAsync(id);
+                var result = await _lessonService.GetLessonByIdAsync(id);
                 if (!result.Success)
                 {
                     return StatusCode(result.StatusCode ?? 404, result.Message);
@@ -76,21 +78,15 @@ namespace VoxFox.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteSectionById(
+        public async Task<IActionResult> DeleteLessonById(
             [FromRoute] Guid id
         )
         {
             try
             {
-                var result = await _sectionService.DeleteSectionAsync(id);
+                var result = await _lessonService.DeleteLessonAsync(id);
                 if (!result.Success)
                     return StatusCode(result.StatusCode ?? 400, result.Message);
-
-                // TODO: Удалить позже после того как не нужно будет
-                // var resultDeleted = await _sectionService.DeleteSectionsAsync(id);
-
-                // if (!resultDeleted)
-                //     return NotFound($"Не удалось удалить раздел по id: {id}");
 
                 return NoContent();
             }
@@ -106,14 +102,14 @@ namespace VoxFox.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<CourseDto>> UpdateSection(
+        public async Task<ActionResult<LessonDto>> UpdateLesson(
             [FromRoute] Guid id,
-            [FromBody] UpdateSectionDto updateSectionDto
+            [FromBody] UpdateLessonDto updateLesson
         )
         {
             try
             {
-                var result = await _sectionService.UpdateSectionAsync(id, updateSectionDto);
+                var result = await _lessonService.UpdateLessonAsync(id, updateLesson);
 
                 if (!result.Success)
                 {
@@ -127,30 +123,5 @@ namespace VoxFox.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
-
-        [HttpGet("{sectionId}/lessons")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<LessonDto>))]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<SectionDto>>> GetLessonsBySectionId(
-            [FromRoute, Required] Guid sectionId
-        )
-        {
-            try
-            {
-                var result = await _sectionService.GetLessonssBySectionIdAsync(sectionId);
-                if (!result.Success)
-                {
-                    return StatusCode(result.StatusCode ?? 400, result.Message);
-                }
-
-                return Ok(result.Data);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
-        }
-
     }
 }
