@@ -63,6 +63,7 @@ jobs:
           # Build with buildx
           docker buildx build \
             --target staging \
+            --build-arg APP_VERSION=${{ steps.version.outputs.new-tag }} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest \

@@ -92,7 +92,12 @@ public class CourseService : ICourseService
         {
             var course = await _courseRepository.GetByIdAsync(courseId);
             if (course == null)
-                throw new Exception($"Не удалось получить курс по id: {courseId}");
+            {
+                return ServiceResult<IList<SectionDto>>.Fail(
+                    $"Курс с id: {courseId} не найден",
+                    StatusCodes.Status404NotFound
+                );
+            }
 
             var sections = await _courseRepository.GetSectionsByCourseIdAsync(courseId);
 
