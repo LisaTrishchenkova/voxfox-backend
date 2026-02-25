@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using VoxFox.Models.DTOs;
 
 namespace VoxFox.Controllers
 {
@@ -57,7 +58,8 @@ namespace VoxFox.Controllers
             {
                 var course = await _courseService.GetCourseByIdAsync(id);
                 if (course == null)
-                    return NotFound();
+                    return NotFound($"Не найден курс по id: {id}");
+
                 return Ok(course);
             }
             catch (System.Exception ex)
@@ -73,9 +75,9 @@ namespace VoxFox.Controllers
             [FromRoute] Guid id
         )
         {
-            var resualt = await _courseService.DeleteCourseAsync(id);
-            if (!resualt)
-                return NotFound();
+            var resultDeleted = await _courseService.DeleteCourseAsync(id);
+            if (!resultDeleted)
+                return NotFound($"Не удалось удалить курс по id: {id}");
 
             return NoContent();
         }
@@ -88,11 +90,35 @@ namespace VoxFox.Controllers
             [FromBody] UpdateCourseDto updateCourseDto
         )
         {
-            var course = await _courseService.UpdateCourseAsync(id, updateCourseDto);
-            if (course == null)
-                return NotFound();
+            var courseUpdated = await _courseService.UpdateCourseAsync(id, updateCourseDto);
+            if (courseUpdated == null)
+                return NotFound($"Не удалось обновить курс по id: {id}");
 
-            return Ok(course);
+            return Ok(courseUpdated);
+        }
+
+        [HttpGet("{courseId}/sections")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<SectionDto>))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<SectionDto>>> GetSectionsByCourseId(
+            [FromRoute, Required] Guid courseId
+        )
+        {
+            try
+            {
+                var result = await _courseService.GetSectionsByCourseIdAsync(courseId);
+                if (!result.Success)
+                {
+                    return StatusCode(result.StatusCode ?? 400, result.Message);
+                }
+
+                return Ok(result.Data);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
+            }
         }
 
         // [HttpPatch("{id}")]
@@ -115,24 +141,6 @@ namespace VoxFox.Controllers
         //     if (!string.IsNullOrEmpty(request.Tags))
         //         course.Tags = request.Tags;
         //     return NoContent();
-        // }
-
-        // private Course? GetCourseFromCursesById(Guid id)
-        // {
-        //     var course = courses.FirstOrDefault(c => c.Id == id);
-        //     return course;
-        // }
-
-        // private CourseTestResponse ConvertToCourseResponse(Course course)
-        // {
-        //     var courseResponse = new CourseTestResponse
-        //     {
-        //         Id = course.Id,
-        //         Title = course.Title,
-        //         Description = course.Description,
-        //         Tags = course.Tags
-        //     };
-        //     return courseResponse;
         // }
     }
 }
