@@ -11,6 +11,8 @@ using VoxFox.Interfaces;
 using VoxFox.Services;
 using VoxFox.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using VoxFox.Repositories;
+using VoxFox.Interfaces.Section;
 
 namespace VoxFox
 {
@@ -89,6 +91,10 @@ namespace VoxFox
 
             builder.Services.AddScoped<ICourseRepository, CourseRepository>();
             builder.Services.AddScoped<ICourseService, CourseService>();
+            builder.Services.AddScoped<ISectionRepository, SectionRepository>();
+            builder.Services.AddScoped<ISectionService, SectionService>();
+            builder.Services.AddScoped<ILessonRepository, LessonRepository>();
+            builder.Services.AddScoped<ILessonService, LessonService>();
             var app = builder.Build();
 
             app.UseRouting();

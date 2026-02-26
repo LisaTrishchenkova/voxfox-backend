@@ -1,5 +1,6 @@
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
+using VoxFox;
 
 public class CourseService : ICourseService
 {
@@ -85,6 +86,33 @@ public class CourseService : ICourseService
         return MapToDo(updateCourse);
     }
 
+    public async Task<ServiceResult<IList<SectionDto>>> GetSectionsByCourseIdAsync(Guid courseId)
+    {
+        try
+        {
+            var course = await _courseRepository.GetByIdAsync(courseId);
+            if (course == null)
+            {
+                return ServiceResult<IList<SectionDto>>.Fail(
+                    $"Курс с id: {courseId} не найден",
+                    StatusCodes.Status404NotFound
+                );
+            }
+
+            var sections = await _courseRepository.GetSectionsByCourseIdAsync(courseId);
+
+            var sectionsDto = sections.Select(MapToDo).ToList();
+            return ServiceResult<IList<SectionDto>>.Ok(sectionsDto);
+        }
+        catch (System.Exception ex)
+        {
+            return ServiceResult<IList<SectionDto>>.Fail(
+                $"Ошибка при получении разделов курса: {ex.Message}",
+                StatusCodes.Status500InternalServerError
+            );
+        }
+    }
+
     private CourseDto MapToDo(Course course)
     {
         return new CourseDto
@@ -98,4 +126,14 @@ public class CourseService : ICourseService
             }).ToList()
         };
     }
+    private SectionDto MapToDo(Section section)
+    {
+        return new SectionDto
+        {
+            Id = section.Id,
+            Title = section.Title,
+            Description = section.Description
+        };
+    }
+
 }
