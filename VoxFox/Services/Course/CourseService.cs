@@ -39,7 +39,7 @@ public class CourseService : ICourseService
         if (course == null)
             return false;
 
-        var isSuccess = await _courseRepository.DeleteAsync(course);
+        var isSuccess = await _courseRepository.DeleteSoftAsync(course);
         return isSuccess;
     }
 

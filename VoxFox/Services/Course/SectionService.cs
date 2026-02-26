@@ -118,29 +118,29 @@ namespace VoxFox.Services
 
         public async Task<ServiceResult<IList<LessonDto>>> GetLessonssBySectionIdAsync(Guid sectionId)
         {
-        try
-        {
-            var section = await _sectionRepository.GetByIdAsync(sectionId);
-            if (section == null)
+            try
+            {
+                var section = await _sectionRepository.GetByIdAsync(sectionId);
+                if (section == null)
+                {
+                    return ServiceResult<IList<LessonDto>>.Fail(
+                        $"Раздел с id: {sectionId} не найден",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                var lessons = await _sectionRepository.GetLessonBySectionIdAsync(sectionId);
+
+                var lessonsDto = lessons.Select(MapToDo).ToList();
+                return ServiceResult<IList<LessonDto>>.Ok(lessonsDto);
+            }
+            catch (System.Exception ex)
             {
                 return ServiceResult<IList<LessonDto>>.Fail(
-                    $"Курс с id: {sectionId} не найден",
-                    StatusCodes.Status404NotFound
+                    $"Ошибка при получении уроков раздела: {ex.Message}",
+                    StatusCodes.Status500InternalServerError
                 );
             }
-
-            var lessons = await _sectionRepository.GetLessonBySectionIdAsync(sectionId);
-
-            var lessonsDto = lessons.Select(MapToDo).ToList();
-            return ServiceResult<IList<LessonDto>>.Ok(lessonsDto);
-        }
-        catch (System.Exception ex)
-        {
-            return ServiceResult<IList<LessonDto>>.Fail(
-                $"Ошибка при получении уроков раздела: {ex.Message}",
-                StatusCodes.Status500InternalServerError
-            );
-        }
 
         }
 
@@ -215,13 +215,13 @@ namespace VoxFox.Services
         }
         private LessonDto MapToDo(Lesson lesson)
         {
-        return new LessonDto
-        {
-            Id = lesson.Id,
-            Title = lesson.Title,
-            Description = lesson.Description,
-            Content = lesson.Content
-        };
+            return new LessonDto
+            {
+                Id = lesson.Id,
+                Title = lesson.Title,
+                Description = lesson.Description,
+                Content = lesson.Content
+            };
         }
     }
 }

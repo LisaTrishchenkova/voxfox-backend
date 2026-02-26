@@ -29,11 +29,13 @@ public class CourseRepository : ICourseRepository
         }
     }
 
-    public async Task<bool> DeleteAsync(Course course)
+    public async Task<bool> DeleteSoftAsync(Course course)
     {
         try
         {
-            _context.Courses.Remove(course);
+            course.IsDeleted = true;
+
+            _context.Courses.Update(course);
             await _context.SaveChangesAsync();
 
             return true;

@@ -6,7 +6,7 @@ public interface ICourseRepository
     Task<Course?> GetByIdAsync(Guid id);
     Task<Course> AddAsync(Course course);
     Task<Course> UpdateAsync(Course course);
-    Task<bool> DeleteAsync(Course course);
+    Task<bool> DeleteSoftAsync(Course course);
     Task<bool> ExistCourseByIdAsync(Guid id);
     Task<IList<Section>> GetSectionsByCourseIdAsync(Guid courseId);
 }
