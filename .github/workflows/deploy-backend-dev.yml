@@ -93,15 +93,6 @@ jobs:
         if: github.event_name == 'push'
         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Docker layers
-        if: github.event_name == 'push'
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Build and push DEV image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
@@ -120,18 +111,18 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
 
-      # - name: Clean old dev images (keep last 10)
-      #   if: github.ref_name == 'dev' && github.event_name == 'push'
-      #   run: |
-      #     # Получаем список всех тегов кроме dev-latest, сортируем, оставляем последние 10
-      #     aws ecr list-images --repository-name ${{ env.ECR_REPOSITORY }} \
-      #       --filter tagStatus=TAGGED \
-      #       --query 'imageIds[?imageTag!=`dev-latest`]' \
-      #       --output text | tr '\t' '\n' | grep -v '^$' | sort -r | tail -n +11 | while read tag; do
-      #         echo "Deleting old image: $tag"
-      #         aws ecr batch-delete-image --repository-name ${{ env.ECR_REPOSITORY }} \
-      #           --image-ids imageTag=$tag || true
-      #     done
+      - name: Clean old dev images (keep last 10)
+        if: github.ref_name == 'dev' && github.event_name == 'push'
+        run: |
+          # Получаем список всех тегов кроме dev-latest, сортируем, оставляем последние 10
+          aws ecr list-images --repository-name ${{ env.ECR_REPOSITORY }} \
+            --filter tagStatus=TAGGED \
+            --query 'imageIds[?imageTag!=`dev-latest`]' \
+            --output text | tr '\t' '\n' | grep -v '^$' | sort -r | tail -n +11 | while read tag; do
+              echo "Deleting old image: $tag"
+              aws ecr batch-delete-image --repository-name ${{ env.ECR_REPOSITORY }} \
+                --image-ids imageTag=$tag || true
+          done
 
       - name: Notify on failure
         if: failure() && github.event_name == 'push'
