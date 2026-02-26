@@ -4,22 +4,25 @@ env:
   AWS_REGION: eu-north-1
   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
   ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
+  DOTNET_VERSION: "9.0.x"
 
 on:
   push:
-    branches: ["dev", "feature/*", "bugfix/*", "chore/*"]
-    paths:
-      - "VoxFox/**"
-      - "Dockerfile"
-  workflow_dispatch:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+      - staging
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-push:
+  build:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write
-      contents: write
 
     steps:
       - name: Checkout code
@@ -27,7 +30,35 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: cd VoxFox && dotnet restore
+
+      - name: Run tests
+        run: |
+          cd VoxFox
+          dotnet test --configuration Release --no-restore --verbosity normal
+
+      - name: Run linter
+        continue-on-error: true
+        run: |
+          cd VoxFox
+          dotnet format --verify-no-changes
+
       - name: Configure AWS credentials
+        if: github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v5
         with:
           audience: sts.amazonaws.com
@@ -35,10 +66,12 @@ jobs:
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
 
       - name: Login to Amazon ECR
+        if: github.event_name == 'push'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Generate dev tag
+        if: github.event_name == 'push'
         id: tag
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
@@ -52,28 +85,57 @@ jobs:
           echo "commit=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
+      - name: Set up Docker Buildx
+        if: github.event_name == 'push'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        if: github.event_name == 'push'
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
       - name: Build and push DEV image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
-          APP_VERSION: ${{ steps.tag.outputs.app_version }}
-          GIT_COMMIT: ${{ steps.tag.outputs.commit }}
-          BUILD_DATE: ${{ steps.tag.outputs.build_date }}
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          target: development
+          push: true
+          build-args: |
+            APP_VERSION=${{ steps.tag.outputs.app_version }}
+            GIT_COMMIT=${{ steps.tag.outputs.commit }}
+            BUILD_DATE=${{ steps.tag.outputs.build_date }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:dev-latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+      # - name: Clean old dev images (keep last 10)
+      #   if: github.ref_name == 'dev' && github.event_name == 'push'
+      #   run: |
+      #     # Получаем список всех тегов кроме dev-latest, сортируем, оставляем последние 10
+      #     aws ecr list-images --repository-name ${{ env.ECR_REPOSITORY }} \
+      #       --filter tagStatus=TAGGED \
+      #       --query 'imageIds[?imageTag!=`dev-latest`]' \
+      #       --output text | tr '\t' '\n' | grep -v '^$' | sort -r | tail -n +11 | while read tag; do
+      #         echo "Deleting old image: $tag"
+      #         aws ecr batch-delete-image --repository-name ${{ env.ECR_REPOSITORY }} \
+      #           --image-ids imageTag=$tag || true
+      #     done
+
+      - name: Notify on failure
+        if: failure() && github.event_name == 'push'
         run: |
-          docker buildx create --use --name builder
-          docker buildx inspect builder --bootstrap
+          # Для Telegram
+          MESSAGE="❌ DEV build failed for branch \`${{ github.ref_name }}\`%0ACommit: ${{ github.sha }}%0AURL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          docker buildx build \
-            --target development \
-            --build-arg APP_VERSION=${APP_VERSION} \
-            --build-arg GIT_COMMIT=${GIT_COMMIT} \
-            --build-arg BUILD_DATE=${BUILD_DATE} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest \
-            --load \
-            -f Dockerfile .
-
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest
-
-          docker buildx rm builder
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_ACTIONS_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=$MESSAGE" \
+            -d "parse_mode=Markdown"
