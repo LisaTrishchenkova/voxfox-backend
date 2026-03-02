@@ -117,4 +117,34 @@ public class CourseRepository : ICourseRepository
         }
 
     }
+
+    public IQueryable<Course> GetCoursesQuery()
+    {
+           return _context.Courses
+                // .Include(c => c.Category)     
+                .AsNoTracking()                
+                .AsQueryable();
+    }
+
+    public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
+    {
+         return await query
+                .Skip(skip)
+                .Take(take)
+                .Select(c => new CourseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    // Price = c.Price,
+                    // CategoryName = c.Category.Name,
+                    // CreatedAt = c.CreatedAt
+                })
+                .ToListAsync();
+    }
+
+    public async Task<int> GetTotalCountAsync(IQueryable<Course> query)
+    {
+        return await query.CountAsync();
+    }
 }

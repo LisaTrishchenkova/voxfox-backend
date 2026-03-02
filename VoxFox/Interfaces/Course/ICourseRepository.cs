@@ -9,4 +9,11 @@ public interface ICourseRepository
     Task<bool> DeleteSoftAsync(Course course);
     Task<bool> ExistCourseByIdAsync(Guid id);
     Task<IList<Section>> GetSectionsByCourseIdAsync(Guid courseId);
+
+    IQueryable<Course> GetCoursesQuery();
+    Task<List<CourseDto>> GetCoursesWithProjectionAsync(
+            IQueryable<Course> query, 
+            int skip, 
+            int take);
+    Task<int> GetTotalCountAsync(IQueryable<Course> query);
 }

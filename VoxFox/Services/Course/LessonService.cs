@@ -64,7 +64,7 @@ namespace VoxFox.Services
                 if (lesson == null)
                     return ServiceResult<bool>.Fail($"Урок с id: {id} не найден", statusCode: StatusCodes.Status404NotFound);
 
-                var isSuccess = await _lessonRepository.DeleteAsync(lesson);
+                var isSuccess = await _lessonRepository.DeleteSoftAsync(lesson);
                 if (!isSuccess)
                     return ServiceResult<bool>.Fail($"Не удалось удалить урок по id: {id}", StatusCodes.Status500InternalServerError);
 

@@ -1,14 +1,17 @@
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 using VoxFox;
+using System.Diagnostics;
 
 public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
+    private readonly ILogger<CourseService> _logger;
 
-    public CourseService(ICourseRepository courseRepository)
+    public CourseService(ICourseRepository courseRepository, ILogger<CourseService> logger)
     {
         _courseRepository = courseRepository;
+        _logger = logger;
     }
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto)
@@ -136,4 +139,114 @@ public class CourseService : ICourseService
         };
     }
 
+    public async Task<PaginatedResponse<CourseDto>> SearchAsync(CourseSearchRequest request)
+    {
+           var stopwatch = Stopwatch.StartNew(); 
+            try
+            {
+                // 1. Получаем базовый запрос из репозитория
+                var query = _courseRepository.GetCoursesQuery();
+
+                // 2. Применяем фильтры
+                if (request.CategoryId.HasValue)
+                {
+                    // query = query.Where(c => c.CategoryId == request.CategoryId.Value);
+                }
+
+                // 3. Применяем поиск
+                if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+                {
+                    query = ApplySearchPriority(query, request.SearchTerm);
+                }
+
+                // 4. Получаем общее количество через репозиторий
+                var totalCount = await _courseRepository.GetTotalCountAsync(query);
+
+                // 5. Применяем сортировку
+                query = ApplySorting(query, request.SortBy, request.SearchTerm);
+
+                // 6. Получаем данные через репозиторий с пагинацией
+                var items = await _courseRepository.GetCoursesWithProjectionAsync(
+                    query,
+                    (request.Page - 1) * request.PageSize,
+                    request.PageSize
+                );
+
+                // 7. Вычисляем страницы
+                var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
+
+                // 8. Логируем
+                _logger.LogInformation(
+                    "Поиск курсов: SearchTerm={SearchTerm}, Найдено={TotalCount}, Время={ElapsedMs}ms",
+                    request.SearchTerm, totalCount, stopwatch.ElapsedMilliseconds);
+
+                // 9. Возвращаем результат
+                return new PaginatedResponse<CourseDto>
+                {
+                    Items = items,
+                    TotalCount = totalCount,
+                    CurrentPage = request.Page,
+                    TotalPages = totalPages,
+                    PageSize = request.PageSize
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при поиске курсов: {SearchTerm}", request.SearchTerm);
+                throw;
+            }
+        }
+
+        private IQueryable<Course> ApplySearchPriority(IQueryable<Course> query, string searchTerm)
+    {
+        var searchTermLower = searchTerm.ToLower();
+
+        // Приоритет 1: Точное совпадение названия
+        var exactMatches = query.Where(c => c.Title.ToLower() == searchTermLower);
+        
+        // Приоритет 2: Название начинается с поискового запроса
+        var startsWithMatches = query.Where(c => 
+            c.Title.ToLower().StartsWith(searchTermLower) && 
+            c.Title.ToLower() != searchTermLower);
+        
+        // Приоритет 3: Название содержит поисковый запрос
+        var titleContainsMatches = query.Where(c => 
+            c.Title.ToLower().Contains(searchTermLower) && 
+            !c.Title.ToLower().StartsWith(searchTermLower) && 
+            c.Title.ToLower() != searchTermLower);
+        
+        // Приоритет 4: Описание содержит поисковый запрос
+        var descriptionContainsMatches = query.Where(c => 
+            c.Description.ToLower().Contains(searchTermLower) && 
+            !c.Title.ToLower().Contains(searchTermLower));
+
+        return exactMatches
+            .Union(startsWithMatches)
+            .Union(titleContainsMatches)
+            .Union(descriptionContainsMatches);
+    }
+       private IQueryable<Course> ApplySorting(IQueryable<Course> query, CoursesSortBy sortBy, string? searchTerm)
+    {
+        return sortBy switch
+        {
+            // CoursesSortBy.Price => query.OrderBy(c => c.Price),
+            CoursesSortBy.Title => query.OrderBy(c => c.Title),
+            CoursesSortBy.Relevance => ApplyRelevanceSorting(query, searchTerm),
+            _ => query.OrderBy(c => c.Title)
+        };
+    }
+
+      private IQueryable<Course> ApplyRelevanceSorting(IQueryable<Course> query, string? searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return query.OrderBy(c => c.Title);
+
+        var searchTermLower = searchTerm.ToLower();
+        
+        return query
+            .OrderBy(c => c.Title.ToLower() != searchTermLower)          // Точные совпадения
+            .ThenBy(c => !c.Title.ToLower().StartsWith(searchTermLower)) // Начинаются с
+            .ThenBy(c => !c.Title.ToLower().Contains(searchTermLower))   // Содержат в названии
+            .ThenBy(c => !c.Description.ToLower().Contains(searchTermLower)); // Содержат в описании
+    }
 }

@@ -63,7 +63,7 @@ namespace VoxFox.Services
                 if (section == null)
                     return ServiceResult<bool>.Fail($"Раздел с id: {id} не найден", statusCode: StatusCodes.Status404NotFound);
 
-                var isSuccess = await _sectionRepository.DeleteAsync(section);
+                var isSuccess = await _sectionRepository.DeleteSoftAsync(section);
                 if (!isSuccess)
                     return ServiceResult<bool>.Fail($"Не удалось удалить раздел по id: {id}", StatusCodes.Status500InternalServerError);
 
@@ -84,7 +84,7 @@ namespace VoxFox.Services
             if (section == null)
                 return false;
 
-            var isSuccess = await _sectionRepository.DeleteAsync(section);
+            var isSuccess = await _sectionRepository.DeleteSoftAsync(section);
             return isSuccess;
         }
 

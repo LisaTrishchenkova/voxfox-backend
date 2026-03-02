@@ -30,11 +30,14 @@ namespace VoxFox.Repositories
             }
         }
 
-        public async Task<bool> DeleteAsync(Lesson lesson)
+        public async Task<bool> DeleteSoftAsync(Lesson lesson)
         {
             try
             {
-                _context.Remove(lesson);
+ 
+                lesson.IsDeleted = true;
+
+                _context.Lessons.Update(lesson);
                 await _context.SaveChangesAsync();
 
                 return true;

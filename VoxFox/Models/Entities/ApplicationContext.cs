@@ -26,13 +26,13 @@ namespace VoxFox.Models.Entities
                 .HasOne(t => t.Course)
                 .WithMany(c => c.Tags)
                 .HasForeignKey(t => t.CourseId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Lesson>()
                .HasOne(l => l.Section)
                .WithMany(s => s.Lessons)
                .HasForeignKey(l => l.SectionId)
-               .OnDelete(DeleteBehavior.Cascade);
+               .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<User>(entity =>
             {
@@ -61,10 +61,8 @@ namespace VoxFox.Models.Entities
 
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid");
-
-                // TODO: удалить после просмотра!
-                entity.Property(e => e.IsDeleted)
-                    .HasDefaultValue(false);
+                entity.Property(e => e.IsDeleted);
+                   // .HasDefaultValue(false);
             }
             );
 
@@ -79,12 +77,25 @@ namespace VoxFox.Models.Entities
 
                 entity.Property(e => e.CourseId)
                     .HasColumnType("uuid");
+                entity.Property(e => e.IsDeleted);
             }
             );
 
+            modelBuilder.Entity<Lesson>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+                entity.Property(e => e.Description)
+                    .IsRequired();
+                entity.Property(e => e.Content)
+                    .IsRequired();
+                entity.Property(e => e.IsDeleted);
+            });
+
             base.OnModelCreating(modelBuilder);
         }
-
 
     }
 }
