@@ -25,45 +25,45 @@ namespace VoxFox.Controllers
             [FromQuery] int? categoryId = null,
             [FromQuery] string? sortBy = "relevance")
         {
-             try
-    {
-        if (page < 1)
-        {
-            return BadRequest(new { error = "Page должен быть больше или равен 1" });
+            try
+            {
+                if (page < 1)
+                {
+                    return BadRequest(new { error = "Page должен быть больше или равен 1" });
+                }
+
+                if (pageSize < 1 || pageSize > 50)
+                {
+                    return BadRequest(new { error = "PageSize должен быть от 1 до 50" });
+                }
+
+                if (!Enum.TryParse<CoursesSortBy>(sortBy, true, out var sortByEnum))
+                {
+                    return BadRequest(new
+                    {
+                        error = "Недопустимое значение sortBy. Допустимые значения: relevance, price, title"
+                    });
+                }
+
+                var request = new CourseSearchRequest
+                {
+                    SearchTerm = searchTerm,
+                    Page = page,
+                    PageSize = pageSize,
+                    CategoryId = categoryId,
+                    SortBy = sortByEnum
+                };
+
+                var result = await _courseService.SearchAsync(request);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при поиске курсов");
+                return StatusCode(500, new { error = "Внутренняя ошибка сервера" });
+            }
         }
-
-        if (pageSize < 1 || pageSize > 50)
-        {
-            return BadRequest(new { error = "PageSize должен быть от 1 до 50" });
-        }
-
-        if (!Enum.TryParse<CoursesSortBy>(sortBy, true, out var sortByEnum))
-        {
-            return BadRequest(new 
-            { 
-                error = "Недопустимое значение sortBy. Допустимые значения: relevance, price, title" 
-            });
-        }
-
-        var request = new CourseSearchRequest
-        {
-            SearchTerm = searchTerm,
-            Page = page,
-            PageSize = pageSize,
-            CategoryId = categoryId,
-            SortBy = sortByEnum  
-        };
-
-        var result = await _courseService.SearchAsync(request);
-        
-        return Ok(result);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Ошибка при поиске курсов");
-        return StatusCode(500, new { error = "Внутренняя ошибка сервера" });
-    }
-        }      
 
 
         [HttpPost]
