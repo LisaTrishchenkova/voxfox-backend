@@ -9,6 +9,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Section> Sections { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
+        public DbSet<Category> Categories { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -33,6 +34,12 @@ namespace VoxFox.Models.Entities
                .WithMany(s => s.Lessons)
                .HasForeignKey(l => l.SectionId)
                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Course>()
+                .HasOne(c => c.Category)
+                .WithMany()
+                .HasForeignKey(c => c.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<User>(entity =>
             {
@@ -60,9 +67,11 @@ namespace VoxFox.Models.Entities
                     .HasMaxLength(500);
 
                 entity.Property(e => e.Id)
-                    .HasColumnType("uuid");
+                    .HasColumnType("uuid")
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(e => e.IsDeleted);
-                   // .HasDefaultValue(false);
+                entity.Property(e => e.IsPublished);
+                entity.Property(e => e.CategoryId);
             }
             );
 
@@ -74,7 +83,9 @@ namespace VoxFox.Models.Entities
                     .HasMaxLength(200);
                 entity.Property(e => e.Description)
                     .IsRequired();
-
+                entity.Property(e => e.Id)
+                    .HasColumnType("uuid")
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(e => e.CourseId)
                     .HasColumnType("uuid");
                 entity.Property(e => e.IsDeleted);
@@ -92,8 +103,21 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Content)
                     .IsRequired();
                 entity.Property(e => e.IsDeleted);
+                entity.Property(e => e.Id)
+                    .HasColumnType("uuid")
+                    .HasDefaultValueSql("gen_random_uuid()");
             });
 
+            modelBuilder.Entity<Category>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+                entity.Property(e => e.Id)
+                    .HasColumnType("uuid")
+                    .HasDefaultValueSql("gen_random_uuid()");
+            });
             base.OnModelCreating(modelBuilder);
         }
 

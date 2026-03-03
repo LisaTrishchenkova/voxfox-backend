@@ -10,5 +10,7 @@ public class CreateCourseDto
     [Required]
     [MinLength(10)]
     public string Description { get; set; } = null!;
+    public Guid? CategoryId { get; set; }
     public ICollection<TagDto> Tags { get; set; } = new List<TagDto>();
+
 }

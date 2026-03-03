@@ -2,6 +2,7 @@ using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 using VoxFox;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 public class CourseService : ICourseService
 {
@@ -18,8 +19,10 @@ public class CourseService : ICourseService
     {
         var course = new Course
         {
+            IsPublished = false,
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
+            CategoryId = createCourseDto.CategoryId,
             Tags = createCourseDto.Tags.Select(tagDto => new Tag
             {
                 Id = Guid.NewGuid(),
@@ -123,6 +126,8 @@ public class CourseService : ICourseService
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
+            IsPublished = course.IsPublished,
+            CategoryId = course.CategoryId,
             Tags = course.Tags.Select(t => new TagDto
             {
                 Name = t.Name
@@ -156,7 +161,10 @@ public class CourseService : ICourseService
 
             var totalCount = await _courseRepository.GetTotalCountAsync(query);
 
-            query = ApplySorting(query, request.SortBy, request.SearchTerm);
+            if (request.SortBy.HasValue)
+            {
+                query = ApplySorting(query, request.SortBy.Value, request.SearchTerm);
+            }
 
             var skip = (request.Page - 1) * request.PageSize;
             var take = request.PageSize;
@@ -233,5 +241,41 @@ public class CourseService : ICourseService
             .ThenBy(c => !c.Title.ToLower().StartsWith(searchTermLower)) // Начинаются с
             .ThenBy(c => !c.Title.ToLower().Contains(searchTermLower))   // Содержат в названии
             .ThenBy(c => !c.Description.ToLower().Contains(searchTermLower)); // Содержат в описании
+    }
+
+    public async Task<ServiceResult<bool>> PublishCourseAsync(Guid id)
+    {
+
+        var course = await _courseRepository.GetByIdAsync(id);
+        if (course == null)
+        {
+            return ServiceResult<bool>.Fail(
+                $"Курс с id: {id} не найден",
+                StatusCodes.Status404NotFound
+            );
+        }
+
+        if (course.IsPublished)
+        {
+            return ServiceResult<bool>.Fail(
+                $"Курс с id: {id} уже опубликован",
+                StatusCodes.Status400BadRequest
+            );
+        }
+
+        if (string.IsNullOrWhiteSpace(course.Title) ||
+            string.IsNullOrWhiteSpace(course.Description))
+        {
+            return ServiceResult<bool>.Fail(
+                "Курс должен иметь название и описание перед публикацией",
+                StatusCodes.Status400BadRequest
+            );
+        }
+
+        course.IsPublished = true;
+
+        await _courseRepository.UpdateAsync(course);
+
+        return ServiceResult<bool>.Ok(true);
     }
 }

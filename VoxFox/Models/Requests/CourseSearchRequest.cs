@@ -4,5 +4,5 @@ public class CourseSearchRequest
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 10;
     public int? CategoryId { get; set; }
-    public CoursesSortBy SortBy { get; set; } = CoursesSortBy.Relevance;
+    public CoursesSortBy? SortBy { get; set; } = CoursesSortBy.Relevance;
 }

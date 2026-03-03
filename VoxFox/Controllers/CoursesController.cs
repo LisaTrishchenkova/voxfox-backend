@@ -23,7 +23,7 @@ namespace VoxFox.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] int? categoryId = null,
-            [FromQuery] string? sortBy = "relevance")
+            [FromQuery] CoursesSortBy? sortBy = CoursesSortBy.Relevance)
         {
             try
             {
@@ -37,13 +37,13 @@ namespace VoxFox.Controllers
                     return BadRequest(new { error = "PageSize должен быть от 1 до 50" });
                 }
 
-                if (!Enum.TryParse<CoursesSortBy>(sortBy, true, out var sortByEnum))
-                {
-                    return BadRequest(new
-                    {
-                        error = "Недопустимое значение sortBy. Допустимые значения: relevance, price, title"
-                    });
-                }
+                // if (!Enum.TryParse<CoursesSortBy>(sortBy, true, out var sortByEnum))
+                // {
+                //     return BadRequest(new
+                //     {
+                //         error = "Недопустимое значение sortBy. Допустимые значения: relevance, price, title"
+                //     });
+                // }
 
                 var request = new CourseSearchRequest
                 {
@@ -51,7 +51,7 @@ namespace VoxFox.Controllers
                     Page = page,
                     PageSize = pageSize,
                     CategoryId = categoryId,
-                    SortBy = sortByEnum
+                    SortBy = sortBy
                 };
 
                 var result = await _courseService.SearchAsync(request);
@@ -65,6 +65,21 @@ namespace VoxFox.Controllers
             }
         }
 
+        [HttpPut("{id}/publish")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult> PublishCourse([FromRoute] Guid id)
+        {
+            var result = await _courseService.PublishCourseAsync(id);
+
+            if (!result.Success)
+            {
+                return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+            }
+
+            return NoContent();
+        }
 
         [HttpPost]
         public async Task<ActionResult<CourseDto>> CreateCourse(

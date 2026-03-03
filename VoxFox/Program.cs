@@ -3,6 +3,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Security.Cryptography.Xml;
+using System.Text.Json.Serialization;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -36,7 +37,11 @@ namespace VoxFox
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             // SettingJWT(builder);
 
@@ -50,6 +55,8 @@ namespace VoxFox
                     Title = "VoxFox API",
                     Version = "v1"
                 });
+
+                c.UseInlineDefinitionsForEnums();
 
                 // c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 // {
