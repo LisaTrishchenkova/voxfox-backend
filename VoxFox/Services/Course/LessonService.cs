@@ -17,7 +17,7 @@ namespace VoxFox.Services
 
         public async Task<ServiceResult<LessonDto>> CreateLessonAsync(Guid sectionId, CreateLessonDto createLessonDto)
         {
-             try
+            try
             {
                 var section = await _lessonRepository.SectionExistsAsync(sectionId);
                 if (!section)
@@ -105,7 +105,7 @@ namespace VoxFox.Services
 
         public async Task<ServiceResult<LessonDto>> UpdateLessonAsync(Guid id, UpdateLessonDto updateLessonDto)
         {
-             try
+            try
             {
                 var lesson = await _lessonRepository.GetByIdAsync(id);
                 if (lesson == null)
@@ -140,7 +140,7 @@ namespace VoxFox.Services
             }
         }
 
-          private LessonDto MapToDo(Lesson lesson)
+        private LessonDto MapToDo(Lesson lesson)
         {
             return new LessonDto
             {

@@ -120,28 +120,28 @@ public class CourseRepository : ICourseRepository
 
     public IQueryable<Course> GetCoursesQuery()
     {
-           return _context.Courses
-                // .Include(c => c.Category)
-                .AsNoTracking()
-                .AsQueryable();
+        return _context.Courses
+             // .Include(c => c.Category)
+             .AsNoTracking()
+             .AsQueryable();
     }
 
     public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
     {
-         return await query
-                .Skip(skip)
-                .Take(take)
-                .Select(c => new CourseDto
-                {
-                    Id = c.Id,
-                    Title = c.Title,
-                    Description = c.Description,
-                    IsPublished = c.IsPublished,
-                    // Price = c.Price,
-                    // CategoryName = c.Category.Name,
-                    // CreatedAt = c.CreatedAt
-                })
-                .ToListAsync();
+        return await query
+               .Skip(skip)
+               .Take(take)
+               .Select(c => new CourseDto
+               {
+                   Id = c.Id,
+                   Title = c.Title,
+                   Description = c.Description,
+                   IsPublished = c.IsPublished,
+                   // Price = c.Price,
+                   CategoryId = c.CategoryId,
+                   // CreatedAt = c.CreatedAt
+               })
+               .ToListAsync();
     }
 
     public async Task<int> GetTotalCountAsync(IQueryable<Course> query)

@@ -25,7 +25,6 @@ public class CourseService : ICourseService
             CategoryId = createCourseDto.CategoryId,
             Tags = createCourseDto.Tags.Select(tagDto => new Tag
             {
-                Id = Guid.NewGuid(),
                 Name = tagDto.Name
             }).ToList()
         };
@@ -152,7 +151,7 @@ public class CourseService : ICourseService
 
             if (request.CategoryId.HasValue)
             {
-                // query = query.Where(c => c.CategoryId == request.CategoryId.Value);
+                query = query.Where(c => c.CategoryId == request.CategoryId.Value);
             }
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
