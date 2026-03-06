@@ -20,7 +20,7 @@ env:
   CONFIGURATION: "Release"
 
 jobs:
-  build-and-test:
+  test:
     timeout-minutes: 15
     runs-on: ubuntu-22.04
 
