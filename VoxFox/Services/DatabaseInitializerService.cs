@@ -12,7 +12,6 @@
 // 		private ILanguageService _languageService;
 // 		private readonly IServiceScopeFactory _serviceScopeFactory;
 
-
 // 		private const string CountryFranceKey = "CountryFranceKey";
 // 		private const string CountryUnitedArabEmiratesKey = "CountryUnitedArabEmiratesKey";
 // 		private const string CountryChinaKey = "CountryChinaKey";
