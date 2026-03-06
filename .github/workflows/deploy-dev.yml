@@ -6,6 +6,9 @@ env:
   ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
 
 on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
   push:
     branches: ["dev", "feature/*", "bugfix/*", "chore/*"]
     paths:
