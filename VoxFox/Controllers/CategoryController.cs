@@ -28,5 +28,24 @@ namespace VoxFox.Controllers
 
             return Ok(categories);
         }
+        [HttpPost]
+        public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto createCategoryDto)
+        {
+            var category = new Category
+            {
+                Name = createCategoryDto.Name
+            };
+
+            _context.Categories.Add(category);
+            await _context.SaveChangesAsync();
+
+            var categoryDto = new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name
+            };
+
+            return CreatedAtAction(nameof(GetAllCategories), new { id = category.Id }, categoryDto);
+        }
     }
 }
