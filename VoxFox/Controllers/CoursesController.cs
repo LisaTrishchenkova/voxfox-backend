@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using VoxFox.Enums;
 using VoxFox.Models.DTOs;
 
 namespace VoxFox.Controllers

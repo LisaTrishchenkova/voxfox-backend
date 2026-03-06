@@ -1,5 +1,8 @@
-public enum CoursesSortBy
+namespace VoxFox.Enums
 {
-    Relevance,
-    Title
+    public enum CoursesSortBy
+    {
+        Relevance,
+        Title
+    }
 }

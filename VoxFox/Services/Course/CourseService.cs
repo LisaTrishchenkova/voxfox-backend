@@ -3,6 +3,7 @@ using VoxFox.Models.Entities;
 using VoxFox;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http.HttpResults;
+using VoxFox.Enums;
 
 public class CourseService : ICourseService
 {
