@@ -9,10 +9,76 @@ namespace VoxFox.Controllers
     public class CoursesController : ControllerBase
     {
         private readonly ICourseService _courseService;
+        private readonly ILogger<CoursesController> _logger;
 
-        public CoursesController(ICourseService courseService)
+        public CoursesController(ICourseService courseService, ILogger<CoursesController> logger)
         {
             _courseService = courseService;
+            _logger = logger;
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<PaginatedResponse<CourseDto>>> Search(
+            [FromQuery] string? searchTerm,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] Guid? categoryId = null,
+            [FromQuery] CoursesSortBy? sortBy = CoursesSortBy.Relevance)
+        {
+            try
+            {
+                if (page < 1)
+                {
+                    return BadRequest(new { error = "Page должен быть больше или равен 1" });
+                }
+
+                if (pageSize < 1 || pageSize > 50)
+                {
+                    return BadRequest(new { error = "PageSize должен быть от 1 до 50" });
+                }
+
+                // if (!Enum.TryParse<CoursesSortBy>(sortBy, true, out var sortByEnum))
+                // {
+                //     return BadRequest(new
+                //     {
+                //         error = "Недопустимое значение sortBy. Допустимые значения: relevance, price, title"
+                //     });
+                // }
+
+                var request = new CourseSearchRequest
+                {
+                    SearchTerm = searchTerm,
+                    Page = page,
+                    PageSize = pageSize,
+                    CategoryId = categoryId,
+                    SortBy = sortBy
+                };
+
+                var result = await _courseService.SearchAsync(request);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при поиске курсов");
+                return StatusCode(500, new { error = "Внутренняя ошибка сервера" });
+            }
+        }
+
+        [HttpPut("{id}/publish")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult> PublishCourse([FromRoute] Guid id)
+        {
+            var result = await _courseService.PublishCourseAsync(id);
+
+            if (!result.Success)
+            {
+                return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+            }
+
+            return NoContent();
         }
 
         [HttpPost]
@@ -41,9 +107,9 @@ namespace VoxFox.Controllers
                 var courses = await _courseService.GetAllCoursesAsync();
                 return Ok(courses);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, "Ошибка сервера");
+                return StatusCode(500, ex.StackTrace);
             }
         }
 
