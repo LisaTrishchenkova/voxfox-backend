@@ -34,12 +34,13 @@ namespace VoxFox.Repositories
 
         public Task<bool> CourseExistsAsync(Guid courseId) => _context.Courses.AnyAsync(c => c.Id == courseId);
 
-        public async Task<bool> DeleteAsync(Section section)
+        public async Task<bool> DeleteSoftAsync(Section section)
         {
             try
             {
-                _context.Remove(section);
-                await _context.SaveChangesAsync();
+            section.IsDeleted = true;
+
+            _context.Sections.Update(section);
 
                 return true;
             }
@@ -65,6 +66,23 @@ namespace VoxFox.Repositories
                 _logger.LogError(ex.Message);
                 throw;
             }
+        }
+
+        public async Task<IList<Lesson>> GetLessonBySectionIdAsync(Guid sectionId)
+        {
+        try
+        {
+            var lessons = await _context.Lessons
+                .Where(s => s.SectionId == sectionId)
+                .ToListAsync();
+
+            return lessons;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex.Message);
+            throw;
+        }
         }
 
         public async Task<Section> UpdateAsync(Section section)

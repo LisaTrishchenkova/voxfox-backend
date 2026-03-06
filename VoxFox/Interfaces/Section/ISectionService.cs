@@ -9,5 +9,7 @@ namespace VoxFox.Interfaces.Section
         Task<ServiceResult<SectionDto>> CreateSectionAsync(Guid courseId, CreateSectionDto createSectionDto);
         Task<ServiceResult<SectionDto>> UpdateSectionAsync(Guid id, UpdateSectionDto updateSectionDto);
         Task<ServiceResult<bool>> DeleteSectionAsync(Guid id);
+        Task<ServiceResult<IList<LessonDto>>> GetLessonssBySectionIdAsync(Guid sectionId);
+
     }
 }

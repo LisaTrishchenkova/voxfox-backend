@@ -14,4 +14,7 @@ public interface ICourseService
     Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto);
     Task<ServiceResult<IList<SectionDto>>> GetSectionsByCourseIdAsync(Guid courseId);
     Task<bool> DeleteCourseAsync(Guid id);
+    Task<PaginatedResponse<CourseDto>> SearchAsync(CourseSearchRequest request);
+    Task<ServiceResult<bool>> PublishCourseAsync(Guid id);
+
 }

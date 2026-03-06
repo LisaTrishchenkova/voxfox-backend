@@ -3,6 +3,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Security.Cryptography.Xml;
+using System.Text.Json.Serialization;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -27,7 +28,7 @@ namespace VoxFox
               options.AddPolicy("AllowFrontend",
                   policy =>
                   {
-                      policy.WithOrigins("https://voxfox.bafid.app", "http://localhost:5001")
+                      policy.WithOrigins("https://voxfox.bafid.app", "http://localhost:5001", "http://localhost:5173")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();
@@ -36,7 +37,11 @@ namespace VoxFox
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             // SettingJWT(builder);
 
@@ -50,6 +55,8 @@ namespace VoxFox
                     Title = "VoxFox API",
                     Version = "v1"
                 });
+
+                c.UseInlineDefinitionsForEnums();
 
                 // c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 // {
@@ -93,6 +100,8 @@ namespace VoxFox
             builder.Services.AddScoped<ICourseService, CourseService>();
             builder.Services.AddScoped<ISectionRepository, SectionRepository>();
             builder.Services.AddScoped<ISectionService, SectionService>();
+            builder.Services.AddScoped<ILessonRepository, LessonRepository>();
+            builder.Services.AddScoped<ILessonService, LessonService>();
             var app = builder.Build();
 
             app.UseRouting();

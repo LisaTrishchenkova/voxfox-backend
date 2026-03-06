@@ -1,14 +1,14 @@
 namespace VoxFox.Models.Entities
 {
-    public class Section
+    public class Lesson
     {
         public Guid Id { get; set; }
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
+        public string Content { get; set; }
         public bool IsDeleted { get; set; } = false;
-        public Guid CourseId { get; set; }
+        public Guid SectionId { get; set; }
 
-        public Course Course { get; set; } = null!;
-         public ICollection<Lesson> Lessons { get; set; }
+        public Section Section { get; set; } = null!;
     }
 }
