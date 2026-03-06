@@ -154,4 +154,10 @@ public class CourseRepository : ICourseRepository
     {
         return await query.CountAsync();
     }
+
+    public async Task DeleteTagAsync(Tag tag)
+    {
+        _context.Tags.Remove(tag);
+        await _context.SaveChangesAsync();
+    }
 }
