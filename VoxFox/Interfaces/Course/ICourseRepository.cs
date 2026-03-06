@@ -12,8 +12,9 @@ public interface ICourseRepository
 
     IQueryable<Course> GetCoursesQuery();
     Task<List<CourseDto>> GetCoursesWithProjectionAsync(
-            IQueryable<Course> query, 
-            int skip, 
+            IQueryable<Course> query,
+            int skip,
             int take);
     Task<int> GetTotalCountAsync(IQueryable<Course> query);
+    Task DeleteTagAsync(Tag existingTag);
 }
