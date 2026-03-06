@@ -79,14 +79,42 @@ public class CourseService : ICourseService
 
         course.Title = updateCourseDto.Title ?? course.Title;
         course.Description = updateCourseDto.Description ?? course.Description;
-        course.Tags = updateCourseDto.Tags.Select(tagDto => new Tag
+
+        // Обновляем теги
+        if (updateCourseDto.Tags != null && course.Tags != null)
         {
-            Name = tagDto.Name,
-            CourseId = course.Id
-        }).ToList();
+            // Удаляем старые теги, которых нет в новом списке
+            var existingTags = course.Tags.ToList();
+            var newTagNames = updateCourseDto.Tags.Select(t => t.Name).ToList();
+
+            // Удаляем теги, которых нет в новом списке
+            foreach (var existingTag in existingTags)
+            {
+                if (!newTagNames.Contains(existingTag.Name))
+                {
+                    // _context.Tags.Remove(existingTag); // или course.Tags.Remove(existingTag)
+                    await _courseRepository.DeleteTagAsync(existingTag);
+                }
+            }
+
+            // Обновляем существующие и добавляем новые теги
+            foreach (var tagDto in updateCourseDto.Tags)
+            {
+                var existingTag = course.Tags.FirstOrDefault(t => t.Name == tagDto.Name);
+                if (existingTag == null)
+                {
+                    // Добавляем новый тег
+                    course.Tags.Add(new Tag
+                    {
+                        Name = tagDto.Name,
+                        CourseId = course.Id
+                    });
+                }
+                // Если тег существует, ничего не делаем (оставляем как есть)
+            }
+        }
 
         var updateCourse = await _courseRepository.UpdateAsync(course);
-
         return MapToDo(updateCourse);
     }
 
