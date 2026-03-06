@@ -9,6 +9,7 @@ namespace VoxFox.Models.Entities
         public bool IsPublished { get; set; } = false;
         public Guid? CategoryId { get; set; }
 
+
         public ICollection<Tag>? Tags { get; set; } = null!;
         public ICollection<Section> Sections { get; set; } = null!;
         public Category? Category { get; set; } = null!;

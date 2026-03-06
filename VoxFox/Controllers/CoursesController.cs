@@ -107,9 +107,9 @@ namespace VoxFox.Controllers
                 var courses = await _courseService.GetAllCoursesAsync();
                 return Ok(courses);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, "Ошибка сервера");
+                return StatusCode(500, ex.StackTrace);
             }
         }
 

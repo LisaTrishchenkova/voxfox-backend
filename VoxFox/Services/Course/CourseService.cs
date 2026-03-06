@@ -120,18 +120,19 @@ public class CourseService : ICourseService
 
     private CourseDto MapToDo(Course course)
     {
-        return new CourseDto
+        var courses = new CourseDto
         {
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
             IsPublished = course.IsPublished,
             CategoryId = course.CategoryId,
-            Tags = course.Tags.Select(t => new TagDto
+            Tags = course.Tags?.Select(t => new TagDto
             {
                 Name = t.Name
             }).ToList()
         };
+        return courses;
     }
     private SectionDto MapToDo(Section section)
     {

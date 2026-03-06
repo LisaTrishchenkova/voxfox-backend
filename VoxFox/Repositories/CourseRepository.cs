@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices.Marshalling;
 using Microsoft.EntityFrameworkCore;
+using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
 public class CourseRepository : ICourseRepository
@@ -56,6 +57,7 @@ public class CourseRepository : ICourseRepository
         {
             var courses = await _context.Courses
                 .AsNoTracking()
+                .Include(c => c.Tags)
                 .ToListAsync();
 
             return courses;
@@ -137,6 +139,10 @@ public class CourseRepository : ICourseRepository
                    Title = c.Title,
                    Description = c.Description,
                    IsPublished = c.IsPublished,
+                   Tags = c.Tags != null ? c.Tags.Select(t => new TagDto
+                   {
+                       Name = t.Name
+                   }).ToList() : new List<TagDto>(),
                    // Price = c.Price,
                    CategoryId = c.CategoryId,
                    // CreatedAt = c.CreatedAt

@@ -7,5 +7,5 @@ public class CourseDto
     public string Description { get; set; }
     public bool IsPublished { get; set; }
     public Guid? CategoryId { get; set; }
-    public ICollection<TagDto> Tags { get; set; } = new List<TagDto>();
+    public ICollection<TagDto>? Tags { get; set; } = new List<TagDto>();
 }
