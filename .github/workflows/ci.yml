@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, staging, main]
+  push:
+    branches: [dev, staging, main]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  CONFIGURATION: "Release"
+
+jobs:
+  test:
+    timeout-minutes: 15
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }} #-warnaserror
+
+      - name: Run linter (dotnet format)
+        run: |
+          dotnet tool install -g dotnet-format || true
+          dotnet format --verify-no-changes --severity warn || echo "⚠️ Linting issues found"
+
+      - name: Run tests
+        run: dotnet test --no-build --configuration ${{ env.CONFIGURATION }} --verbosity normal
+
+      - name: Test with coverage (for .NET 9)
+        run: |
+          dotnet test --no-build --configuration ${{ env.CONFIGURATION }} \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --settings coverlet.runsettings || echo "⚠️ Coverage failed but continuing"
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.sha }}
+          path: ./TestResults
+          retention-days: 30
+
+      - name: Publish
+        run: dotnet publish -c ${{ env.CONFIGURATION }} -o ./publish
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{github.sha}}
+          path: ./publish
+          retention-days: 30
+
+      - name: Check for vulnerable packages
+        run: |
+          dotnet list package --vulnerable --include-transitive || echo "⚠️ Check packages for vulnerabilities"
+          dotnet list package --deprecated || echo "⚠️ Check for deprecated packages"
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ **ASP.NET Core CI passed on .NET ${{ env.DOTNET_VERSION }}!**\n\n` +
+                    `- Build artifact: \`build-${{ github.sha }}\`\n` +
+                    `- See details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            })
+
+      - name: Notify on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ❌ **ASP.NET Core CI failed on ${{ github.ref_name }}**
+            - .NET Version: ${{ env.DOTNET_VERSION }}
+            - See: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

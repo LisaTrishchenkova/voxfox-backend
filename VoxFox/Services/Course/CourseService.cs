@@ -1,25 +1,31 @@
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 using VoxFox;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Http.HttpResults;
+using VoxFox.Enums;
 
 public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
+    private readonly ILogger<CourseService> _logger;
 
-    public CourseService(ICourseRepository courseRepository)
+    public CourseService(ICourseRepository courseRepository, ILogger<CourseService> logger)
     {
         _courseRepository = courseRepository;
+        _logger = logger;
     }
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto)
     {
         var course = new Course
         {
+            IsPublished = false,
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
+            CategoryId = createCourseDto.CategoryId,
             Tags = createCourseDto.Tags.Select(tagDto => new Tag
             {
-                Id = Guid.NewGuid(),
                 Name = tagDto.Name
             }).ToList()
         };
@@ -39,7 +45,7 @@ public class CourseService : ICourseService
         if (course == null)
             return false;
 
-        var isSuccess = await _courseRepository.DeleteAsync(course);
+        var isSuccess = await _courseRepository.DeleteSoftAsync(course);
         return isSuccess;
     }
 
@@ -115,16 +121,19 @@ public class CourseService : ICourseService
 
     private CourseDto MapToDo(Course course)
     {
-        return new CourseDto
+        var courses = new CourseDto
         {
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
-            Tags = course.Tags.Select(t => new TagDto
+            IsPublished = course.IsPublished,
+            CategoryId = course.CategoryId,
+            Tags = course.Tags?.Select(t => new TagDto
             {
                 Name = t.Name
             }).ToList()
         };
+        return courses;
     }
     private SectionDto MapToDo(Section section)
     {
@@ -136,4 +145,138 @@ public class CourseService : ICourseService
         };
     }
 
+    public async Task<PaginatedResponse<CourseDto>> SearchAsync(CourseSearchRequest request)
+    {
+        try
+        {
+            var query = _courseRepository.GetCoursesQuery();
+
+            if (request.CategoryId.HasValue)
+            {
+                query = query.Where(c => c.CategoryId == request.CategoryId.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+            {
+                query = ApplySearchPriority(query, request.SearchTerm);
+            }
+
+            var totalCount = await _courseRepository.GetTotalCountAsync(query);
+
+            if (request.SortBy.HasValue)
+            {
+                query = ApplySorting(query, request.SortBy.Value, request.SearchTerm);
+            }
+
+            var skip = (request.Page - 1) * request.PageSize;
+            var take = request.PageSize;
+
+            var items = await _courseRepository.GetCoursesWithProjectionAsync(
+                query,
+                skip,
+                take
+            );
+            var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
+            _logger.LogInformation(
+                "Поиск курсов: SearchTerm={SearchTerm}, Найдено={TotalCount}",
+                request.SearchTerm, totalCount);
+            return new PaginatedResponse<CourseDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                CurrentPage = request.Page,
+                TotalPages = totalPages,
+                PageSize = request.PageSize
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при поиске курсов: {SearchTerm}", request.SearchTerm);
+            throw;
+        }
+    }
+
+    private IQueryable<Course> ApplySearchPriority(IQueryable<Course> query, string searchTerm)
+    {
+        var searchTermLower = searchTerm.ToLower();
+
+        var exactMatches = query.Where(c => c.Title.ToLower() == searchTermLower);
+
+        var startsWithMatches = query.Where(c =>
+            c.Title.ToLower().StartsWith(searchTermLower) &&
+            c.Title.ToLower() != searchTermLower);
+
+        var titleContainsMatches = query.Where(c =>
+            c.Title.ToLower().Contains(searchTermLower) &&
+            !c.Title.ToLower().StartsWith(searchTermLower) &&
+            c.Title.ToLower() != searchTermLower);
+
+        var descriptionContainsMatches = query.Where(c =>
+            c.Description.ToLower().Contains(searchTermLower) &&
+            !c.Title.ToLower().Contains(searchTermLower));
+
+        return exactMatches
+            .Union(startsWithMatches)
+            .Union(titleContainsMatches)
+            .Union(descriptionContainsMatches);
+    }
+    private IQueryable<Course> ApplySorting(IQueryable<Course> query, CoursesSortBy sortBy, string? searchTerm)
+    {
+        return sortBy switch
+        {
+            // CoursesSortBy.Price => query.OrderBy(c => c.Price),
+            CoursesSortBy.Title => query.OrderBy(c => c.Title),
+            CoursesSortBy.Relevance => ApplyRelevanceSorting(query, searchTerm),
+            _ => query.OrderBy(c => c.Title)
+        };
+    }
+
+    private IQueryable<Course> ApplyRelevanceSorting(IQueryable<Course> query, string? searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return query.OrderBy(c => c.Title);
+
+        var searchTermLower = searchTerm.ToLower();
+
+        return query
+            .OrderBy(c => c.Title.ToLower() != searchTermLower)          // Точные совпадения
+            .ThenBy(c => !c.Title.ToLower().StartsWith(searchTermLower)) // Начинаются с
+            .ThenBy(c => !c.Title.ToLower().Contains(searchTermLower))   // Содержат в названии
+            .ThenBy(c => !c.Description.ToLower().Contains(searchTermLower)); // Содержат в описании
+    }
+
+    public async Task<ServiceResult<bool>> PublishCourseAsync(Guid id)
+    {
+
+        var course = await _courseRepository.GetByIdAsync(id);
+        if (course == null)
+        {
+            return ServiceResult<bool>.Fail(
+                $"Курс с id: {id} не найден",
+                StatusCodes.Status404NotFound
+            );
+        }
+
+        if (course.IsPublished)
+        {
+            return ServiceResult<bool>.Fail(
+                $"Курс с id: {id} уже опубликован",
+                StatusCodes.Status400BadRequest
+            );
+        }
+
+        if (string.IsNullOrWhiteSpace(course.Title) ||
+            string.IsNullOrWhiteSpace(course.Description))
+        {
+            return ServiceResult<bool>.Fail(
+                "Курс должен иметь название и описание перед публикацией",
+                StatusCodes.Status400BadRequest
+            );
+        }
+
+        course.IsPublished = true;
+
+        await _courseRepository.UpdateAsync(course);
+
+        return ServiceResult<bool>.Ok(true);
+    }
 }

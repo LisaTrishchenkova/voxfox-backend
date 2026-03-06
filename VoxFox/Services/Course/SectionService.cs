@@ -63,7 +63,7 @@ namespace VoxFox.Services
                 if (section == null)
                     return ServiceResult<bool>.Fail($"Раздел с id: {id} не найден", statusCode: StatusCodes.Status404NotFound);
 
-                var isSuccess = await _sectionRepository.DeleteAsync(section);
+                var isSuccess = await _sectionRepository.DeleteSoftAsync(section);
                 if (!isSuccess)
                     return ServiceResult<bool>.Fail($"Не удалось удалить раздел по id: {id}", StatusCodes.Status500InternalServerError);
 
@@ -84,7 +84,7 @@ namespace VoxFox.Services
             if (section == null)
                 return false;
 
-            var isSuccess = await _sectionRepository.DeleteAsync(section);
+            var isSuccess = await _sectionRepository.DeleteSoftAsync(section);
             return isSuccess;
         }
 
@@ -114,6 +114,34 @@ namespace VoxFox.Services
                     StatusCodes.Status500InternalServerError
                 );
             }
+        }
+
+        public async Task<ServiceResult<IList<LessonDto>>> GetLessonssBySectionIdAsync(Guid sectionId)
+        {
+            try
+            {
+                var section = await _sectionRepository.GetByIdAsync(sectionId);
+                if (section == null)
+                {
+                    return ServiceResult<IList<LessonDto>>.Fail(
+                        $"Раздел с id: {sectionId} не найден",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                var lessons = await _sectionRepository.GetLessonBySectionIdAsync(sectionId);
+
+                var lessonsDto = lessons.Select(MapToDo).ToList();
+                return ServiceResult<IList<LessonDto>>.Ok(lessonsDto);
+            }
+            catch (System.Exception ex)
+            {
+                return ServiceResult<IList<LessonDto>>.Fail(
+                    $"Ошибка при получении уроков раздела: {ex.Message}",
+                    StatusCodes.Status500InternalServerError
+                );
+            }
+
         }
 
         public async Task<ServiceResult<SectionDto?>> GetSectionByIdAsync(Guid id)
@@ -183,6 +211,16 @@ namespace VoxFox.Services
                 Id = section.Id,
                 Title = section.Title,
                 Description = section.Description
+            };
+        }
+        private LessonDto MapToDo(Lesson lesson)
+        {
+            return new LessonDto
+            {
+                Id = lesson.Id,
+                Title = lesson.Title,
+                Description = lesson.Description,
+                Content = lesson.Content
             };
         }
     }

@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices.Marshalling;
 using Microsoft.EntityFrameworkCore;
+using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
 public class CourseRepository : ICourseRepository
@@ -29,11 +30,13 @@ public class CourseRepository : ICourseRepository
         }
     }
 
-    public async Task<bool> DeleteAsync(Course course)
+    public async Task<bool> DeleteSoftAsync(Course course)
     {
         try
         {
-            _context.Courses.Remove(course);
+            course.IsDeleted = true;
+
+            _context.Courses.Update(course);
             await _context.SaveChangesAsync();
 
             return true;
@@ -54,6 +57,7 @@ public class CourseRepository : ICourseRepository
         {
             var courses = await _context.Courses
                 .AsNoTracking()
+                .Include(c => c.Tags)
                 .ToListAsync();
 
             return courses;
@@ -114,5 +118,40 @@ public class CourseRepository : ICourseRepository
             throw;
         }
 
+    }
+
+    public IQueryable<Course> GetCoursesQuery()
+    {
+        return _context.Courses
+             // .Include(c => c.Category)
+             .AsNoTracking()
+             .AsQueryable();
+    }
+
+    public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
+    {
+        return await query
+               .Skip(skip)
+               .Take(take)
+               .Select(c => new CourseDto
+               {
+                   Id = c.Id,
+                   Title = c.Title,
+                   Description = c.Description,
+                   IsPublished = c.IsPublished,
+                   Tags = c.Tags != null ? c.Tags.Select(t => new TagDto
+                   {
+                       Name = t.Name
+                   }).ToList() : new List<TagDto>(),
+                   // Price = c.Price,
+                   CategoryId = c.CategoryId,
+                   // CreatedAt = c.CreatedAt
+               })
+               .ToListAsync();
+    }
+
+    public async Task<int> GetTotalCountAsync(IQueryable<Course> query)
+    {
+        return await query.CountAsync();
     }
 }
