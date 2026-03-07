@@ -18,7 +18,7 @@ public class CourseService : ICourseService
     {
         var course = new Course
         {
-            IsPublished = false,
+            Status = CourseStatus.Draft,
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
             CategoryId = createCourseDto.CategoryId,
@@ -152,14 +152,14 @@ public class CourseService : ICourseService
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
-            IsPublished = course.IsPublished,
+            Status = course.Status,
             CategoryId = course.CategoryId,
             Tags = course.Tags?.Select(t => new TagDto
             {
                 Name = t.Name
             }).ToList()
         };
-        
+
         return courses;
     }
     private SectionDto MapToDo(Section section)
@@ -176,7 +176,7 @@ public class CourseService : ICourseService
     {
         try
         {
-            var query = _courseRepository.GetCoursesQuery();
+            var query = _courseRepository.GetPublishedCoursesQuery();
 
             if (request.CategoryId.HasValue)
             {
@@ -283,7 +283,7 @@ public class CourseService : ICourseService
             );
         }
 
-        if (course.IsPublished)
+        if (course.Status == CourseStatus.Published)
         {
             return ServiceResult<bool>.Fail(
                 $"Курс с id: {id} уже опубликован",
@@ -300,7 +300,7 @@ public class CourseService : ICourseService
             );
         }
 
-        course.IsPublished = true;
+        course.Status = CourseStatus.Published;
 
         await _courseRepository.UpdateAsync(course);
 

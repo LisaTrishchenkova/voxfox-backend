@@ -25,7 +25,7 @@ public class CourseRepository : ICourseRepository
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex.Message);
+            _logger.LogError(ex.StackTrace);
             throw;
         }
     }
@@ -128,6 +128,13 @@ public class CourseRepository : ICourseRepository
              .AsQueryable();
     }
 
+    public IQueryable<Course> GetPublishedCoursesQuery()
+    {
+        return _context.Courses
+             .Where(c => c.Status == VoxFox.Enums.CourseStatus.Published)
+             .AsNoTracking()
+             .AsQueryable();
+    }
     public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
     {
         return await query
@@ -138,7 +145,7 @@ public class CourseRepository : ICourseRepository
                    Id = c.Id,
                    Title = c.Title,
                    Description = c.Description,
-                   IsPublished = c.IsPublished,
+                   Status = c.Status,
                    Tags = c.Tags != null ? c.Tags.Select(t => new TagDto
                    {
                        Name = t.Name
