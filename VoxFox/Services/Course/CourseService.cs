@@ -22,6 +22,7 @@ public class CourseService : ICourseService
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
             CategoryId = createCourseDto.CategoryId,
+            AuthorId = createCourseDto.AuthorId,
             Tags = createCourseDto.Tags.Select(tagDto => new Tag
             {
                 Name = tagDto.Name
@@ -33,7 +34,6 @@ public class CourseService : ICourseService
         {
             throw new Exception("Не удалось добавить курс");
         }
-
         return MapToDo(createdCourse);
     }
 
@@ -157,7 +157,12 @@ public class CourseService : ICourseService
             Tags = course.Tags?.Select(t => new TagDto
             {
                 Name = t.Name
-            }).ToList()
+            }).ToList(),
+             Author = new AuthorDto 
+            {
+            Id = course.Author.Id,
+            Name = course.Author.Name
+            }
         };
 
         return courses;

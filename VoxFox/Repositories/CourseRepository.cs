@@ -21,6 +21,10 @@ public class CourseRepository : ICourseRepository
             _context.Courses.Add(course);
             await _context.SaveChangesAsync();
 
+            await _context.Entry(course)
+              .Reference(c => c.Author)  // Reference - для одиночной связи
+              .LoadAsync();
+
             return course;
         }
         catch (DbUpdateException ex)
@@ -58,6 +62,7 @@ public class CourseRepository : ICourseRepository
             var courses = await _context.Courses
                 .AsNoTracking()
                 .Include(c => c.Tags)
+                .Include(c => c.Author)
                 .ToListAsync();
 
             return courses;
@@ -75,6 +80,7 @@ public class CourseRepository : ICourseRepository
         {
             var course = await _context.Courses
                 .Include(c => c.Tags)
+                .Include(c => c.Author)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             return course;
@@ -133,6 +139,7 @@ public class CourseRepository : ICourseRepository
         return _context.Courses
              .Where(c => c.Status == VoxFox.Enums.CourseStatus.Published)
              .AsNoTracking()
+             .Include(c => c.Author)
              .AsQueryable();
     }
     public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
@@ -152,6 +159,11 @@ public class CourseRepository : ICourseRepository
                    }).ToList() : new List<TagDto>(),
                    // Price = c.Price,
                    CategoryId = c.CategoryId,
+                   Author = new AuthorDto  // ДОБАВЬ ЭТО!
+                  {
+                   Id = c.Author.Id,
+                   Name = c.Author.Name
+                    }
                    // CreatedAt = c.CreatedAt
                })
                .ToListAsync();
