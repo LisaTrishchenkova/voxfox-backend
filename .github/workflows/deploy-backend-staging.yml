@@ -144,7 +144,7 @@ jobs:
           # ВРЕМЕННО: используем v0.0.1
           # ПОТОМ ЗАМЕНИТЬ НА:
           # VERSION_TAG=$(bash ./scripts/get_version.sh)
-          IMAGE_TAG="v0.1.0"
+          IMAGE_TAG="v0.1.1"
 
           # Добавим еще тег с датой для отладки
           DEBUG_TAG="staging-${DATE}-${SHORT_SHA}"
