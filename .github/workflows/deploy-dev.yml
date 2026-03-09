@@ -1,4 +1,4 @@
-name: Build and Push Backend to ECR (DEV) New
+name: Build and Push Backend to ECR (DEV)
 
 env:
   AWS_REGION: eu-north-1
@@ -10,12 +10,6 @@ on:
     workflows: ["CI"]
     types: [completed]
     branches: [dev]
-  push:
-    branches: ["dev"]
-    paths:
-      - "VoxFox/**/*"
-      - "Dockerfile"
-      - ".github/workflows/deploy-dev.yml"
 
 jobs:
   build-and-push:
