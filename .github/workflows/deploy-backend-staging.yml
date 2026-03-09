@@ -141,7 +141,7 @@ jobs:
           BRANCH_NAME_CLEAN=${BRANCH_NAME//\//-}
 
           # TODO: изменить получение версии
-          # ВРЕМЕННО: используем v0.0.2
+          # ВРЕМЕННО: используем v0.0.3
           # ПОТОМ ЗАМЕНИТЬ НА:
           # VERSION_TAG=$(bash ./scripts/get_version.sh)
           IMAGE_TAG="v0.0.1"
@@ -176,11 +176,9 @@ jobs:
             --build-arg GIT_COMMIT=${GIT_COMMIT} \
             --build-arg BUILD_DATE=${BUILD_DATE} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest \
             --load \
             -f Dockerfile .
 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
 
           docker buildx rm builder
