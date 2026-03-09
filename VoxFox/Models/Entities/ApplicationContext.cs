@@ -84,6 +84,11 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.CategoryId);
                 entity.Property(e => e.AuthorId)
                     .IsRequired(false);
+                
+                entity.Property(e => e.PublishedAt)
+                    .IsRequired()  
+                    .HasColumnType("timestamp with time zone") 
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
             }
             );
 

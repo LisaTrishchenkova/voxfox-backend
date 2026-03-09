@@ -8,7 +8,7 @@ public class CourseDto
     public string Description { get; set; }
     public CourseStatus Status { get; set; }
     public Guid? CategoryId { get; set; }
-
+    public DateTime PublishedAt { get; set; }
     public AuthorDto Author { get; set; }
     public ICollection<TagDto>? Tags { get; set; } = new List<TagDto>();
 }

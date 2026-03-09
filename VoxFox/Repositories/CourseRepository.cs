@@ -159,12 +159,12 @@ public class CourseRepository : ICourseRepository
                    }).ToList() : new List<TagDto>(),
                    // Price = c.Price,
                    CategoryId = c.CategoryId,
-                   Author = new AuthorDto  // ДОБАВЬ ЭТО!
+                   Author = new AuthorDto
                   {
                    Id = c.Author.Id,
                    Name = c.Author.Name
-                    }
-                   // CreatedAt = c.CreatedAt
+                    },
+                   PublishedAt = c.PublishedAt
                })
                .ToListAsync();
     }

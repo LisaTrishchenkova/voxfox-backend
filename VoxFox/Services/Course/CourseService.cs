@@ -23,6 +23,7 @@ public class CourseService : ICourseService
             Description = createCourseDto.Description,
             CategoryId = createCourseDto.CategoryId,
             AuthorId = createCourseDto.AuthorId,
+            PublishedAt = DateTime.UtcNow,
             Tags = createCourseDto.Tags.Select(tagDto => new Tag
             {
                 Name = tagDto.Name
@@ -162,7 +163,8 @@ public class CourseService : ICourseService
             {
             Id = course.Author.Id,
             Name = course.Author.Name
-            }
+            },
+             PublishedAt = course.PublishedAt
         };
 
         return courses;
@@ -257,6 +259,8 @@ public class CourseService : ICourseService
         {
             // CoursesSortBy.Price => query.OrderBy(c => c.Price),
             CoursesSortBy.Title => query.OrderBy(c => c.Title),
+            CoursesSortBy.Date => query.OrderBy(c => c.PublishedAt),
+            CoursesSortBy.DateDesc => query.OrderByDescending(c => c.PublishedAt),
             CoursesSortBy.Relevance => ApplyRelevanceSorting(query, searchTerm),
             _ => query.OrderBy(c => c.Title)
         };
@@ -306,6 +310,7 @@ public class CourseService : ICourseService
         }
 
         course.Status = CourseStatus.Published;
+        course.PublishedAt = DateTime.UtcNow;
 
         await _courseRepository.UpdateAsync(course);
 
