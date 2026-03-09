@@ -3,7 +3,6 @@ using Microsoft.VisualBasic;
 using System.ComponentModel.DataAnnotations;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
-using VoxFox.Services;
 
 namespace VoxFox.Controllers
 {
