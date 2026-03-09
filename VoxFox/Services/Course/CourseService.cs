@@ -159,6 +159,7 @@ public class CourseService : ICourseService
                 Name = t.Name
             }).ToList()
         };
+        
         return courses;
     }
     private SectionDto MapToDo(Section section)
