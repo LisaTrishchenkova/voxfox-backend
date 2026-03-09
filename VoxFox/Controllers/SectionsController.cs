@@ -10,7 +10,6 @@ namespace VoxFox.Controllers
     [Route("api/[controller]")]
     public class SectionsController : ControllerBase
     {
-        //Зарегистрировать не забыть в Program.cs
         private readonly ISectionService _sectionService;
         public SectionsController(ISectionService sectionService)
         {

@@ -1,4 +1,4 @@
-name: Build and Push Backend to ECR (DEV)
+name: Build and Push to ECR (DEV)
 
 env:
   AWS_REGION: eu-north-1
@@ -13,12 +13,9 @@ on:
 
 jobs:
   build-and-push:
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      github.event_name == 'push'
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     runs-on: ubuntu-latest
-
     permissions:
       id-token: write
       contents: write
@@ -28,7 +25,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 2
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
+          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -45,14 +42,17 @@ jobs:
         id: tag
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          BRANCH_NAME=${GITHUB_REF_NAME//\//-}
+          BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
           DATE=$(date -u +'%Y%m%d-%H%M')
 
-          IMAGE_TAG="${BRANCH_NAME}-${DATE}-${SHORT_SHA}"
+          # Очищаем имя ветки от слешей
+          BRANCH_NAME_CLEAN=${BRANCH_NAME//\//-}
+          IMAGE_TAG="${BRANCH_NAME_CLEAN}-${DATE}-${SHORT_SHA}"
 
           echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "app_version=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "commit=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
       - name: Build and push DEV image
