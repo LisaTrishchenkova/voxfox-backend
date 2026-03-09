@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.VisualBasic;
 using System.ComponentModel.DataAnnotations;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
@@ -11,6 +10,7 @@ namespace VoxFox.Controllers
     public class SectionsController : ControllerBase
     {
         private readonly ISectionService _sectionService;
+
         public SectionsController(ISectionService sectionService)
         {
             _sectionService = sectionService;

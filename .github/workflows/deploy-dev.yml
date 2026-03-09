@@ -25,7 +25,13 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 2
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Show checkout info
+        run: |
+          echo "Checked out commit: $(git rev-parse HEAD)"
+          echo "Expected commit: ${{ github.event.workflow_run.head_sha }}"
+          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
