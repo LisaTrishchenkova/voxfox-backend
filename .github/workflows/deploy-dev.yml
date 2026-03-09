@@ -1,4 +1,4 @@
-name: Build and Push Backend to ECR (DEV)
+name: Build and Push Backend to ECR (DEV) New
 
 env:
   AWS_REGION: eu-north-1
