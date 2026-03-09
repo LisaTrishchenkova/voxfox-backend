@@ -11,6 +11,7 @@ namespace VoxFox.Controllers
     public class SectionsController : ControllerBase
     {
         private readonly ISectionService _sectionService;
+
         public SectionsController(ISectionService sectionService)
         {
             _sectionService = sectionService;
