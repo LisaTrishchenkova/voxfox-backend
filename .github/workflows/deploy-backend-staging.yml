@@ -1,0 +1,175 @@
+# name: Build and Push Backend to ECR (STAGING)
+
+# env:
+#   AWS_REGION: eu-north-1
+#   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+#   ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
+
+# on:
+#   push:
+#     branches:
+#       - staging
+#   workflow_dispatch:
+#     inputs:
+#       version_type:
+#         description: "Type version"
+#         required: true
+#         default: "patch"
+#         type: choice
+#         options:
+#           - patch
+#           - minor
+#           - major
+
+# jobs:
+#   staging:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       id-token: write
+#       contents: write
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v5
+#         with:
+#           fetch-depth: 0
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v5
+#         with:
+#           audience: sts.amazonaws.com
+#           aws-region: ${{ env.AWS_REGION }}
+#           role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v2
+
+#       - name: Generate staging version
+#         id: version
+#         run: |
+#           VERSION_TYPE=${{ github.event.inputs.version_type || 'patch' }}
+#           bash ./scripts/git_update.sh -v $VERSION_TYPE
+
+#       - name: Build and push staging image
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           VERSION_TAG: ${{ steps.version.outputs.new-tag }}
+#         run: |
+#           # Setup buildx
+#           docker buildx create --use --name builder
+#           docker buildx inspect builder --bootstrap
+
+#           # Build with buildx
+#           docker buildx build \
+#             --target staging \
+#             --build-arg APP_VERSION=${{ steps.version.outputs.new-tag }} \
+#             -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG \
+#             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
+#             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest \
+#             --load \
+#             -f Dockerfile .
+
+#           # Push to ECR
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging
+
+#           # Cleanup
+#           docker buildx rm builder
+
+#       - name: Create GitHub Release
+#         uses: softprops/action-gh-release@v1
+#         with:
+#           tag_name: ${{ steps.version.outputs.new-tag }}
+#           name: Release ${{ steps.version.outputs.new-tag }}
+#           generate_release_notes: true
+
+name: Build and Push to ECR (STAGING)
+
+env:
+  AWS_REGION: eu-north-1
+  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [staging]
+
+jobs:
+  build-and-push:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Show checkout info
+        run: |
+          echo "Checked out commit: $(git rev-parse HEAD)"
+          echo "Expected commit: ${{ github.event.workflow_run.head_sha }}"
+          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Generate staging tag
+        id: tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
+          DATE=$(date -u +'%Y%m%d-%H%M')
+
+          # Очищаем имя ветки от слешей
+          BRANCH_NAME_CLEAN=${BRANCH_NAME//\//-}
+          IMAGE_TAG="${BRANCH_NAME_CLEAN}-${DATE}-${SHORT_SHA}"
+
+          echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "app_version=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "commit=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Build and push STAGING image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          APP_VERSION: ${{ steps.tag.outputs.app_version }}
+          GIT_COMMIT: ${{ steps.tag.outputs.commit }}
+          BUILD_DATE: ${{ steps.tag.outputs.build_date }}
+        run: |
+          docker buildx create --use --name builder
+          docker buildx inspect builder --bootstrap
+
+          docker buildx build \
+            --target development \
+            --build-arg APP_VERSION=${APP_VERSION} \
+            --build-arg GIT_COMMIT=${GIT_COMMIT} \
+            --build-arg BUILD_DATE=${BUILD_DATE} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest \
+            --load \
+            -f Dockerfile .
+
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
+
+          docker buildx rm builder
