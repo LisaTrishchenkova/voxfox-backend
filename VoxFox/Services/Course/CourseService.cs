@@ -18,10 +18,12 @@ public class CourseService : ICourseService
     {
         var course = new Course
         {
-            IsPublished = false,
+            Status = CourseStatus.Draft,
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
             CategoryId = createCourseDto.CategoryId,
+            AuthorId = createCourseDto.AuthorId,
+            PublishedAt = DateTime.UtcNow,
             Tags = createCourseDto.Tags.Select(tagDto => new Tag
             {
                 Name = tagDto.Name
@@ -33,7 +35,6 @@ public class CourseService : ICourseService
         {
             throw new Exception("Не удалось добавить курс");
         }
-
         return MapToDo(createdCourse);
     }
 
@@ -152,14 +153,20 @@ public class CourseService : ICourseService
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
-            IsPublished = course.IsPublished,
+            Status = course.Status,
             CategoryId = course.CategoryId,
             Tags = course.Tags?.Select(t => new TagDto
             {
                 Name = t.Name
-            }).ToList()
+            }).ToList(),
+             Author = new AuthorDto 
+            {
+            Id = course.Author.Id,
+            Name = course.Author.Name
+            },
+             PublishedAt = course.PublishedAt
         };
-        
+
         return courses;
     }
     private SectionDto MapToDo(Section section)
@@ -176,7 +183,7 @@ public class CourseService : ICourseService
     {
         try
         {
-            var query = _courseRepository.GetCoursesQuery();
+            var query = _courseRepository.GetPublishedCoursesQuery();
 
             if (request.CategoryId.HasValue)
             {
@@ -252,6 +259,8 @@ public class CourseService : ICourseService
         {
             // CoursesSortBy.Price => query.OrderBy(c => c.Price),
             CoursesSortBy.Title => query.OrderBy(c => c.Title),
+            CoursesSortBy.Date => query.OrderBy(c => c.PublishedAt),
+            CoursesSortBy.DateDesc => query.OrderByDescending(c => c.PublishedAt),
             CoursesSortBy.Relevance => ApplyRelevanceSorting(query, searchTerm),
             _ => query.OrderBy(c => c.Title)
         };
@@ -283,7 +292,7 @@ public class CourseService : ICourseService
             );
         }
 
-        if (course.IsPublished)
+        if (course.Status == CourseStatus.Published)
         {
             return ServiceResult<bool>.Fail(
                 $"Курс с id: {id} уже опубликован",
@@ -300,7 +309,8 @@ public class CourseService : ICourseService
             );
         }
 
-        course.IsPublished = true;
+        course.Status = CourseStatus.Published;
+        course.PublishedAt = DateTime.UtcNow;
 
         await _courseRepository.UpdateAsync(course);
 

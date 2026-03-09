@@ -18,7 +18,7 @@ namespace VoxFox.Controllers
             _logger = logger;
         }
 
-        [HttpGet("search")]
+        [HttpGet]
         public async Task<ActionResult<PaginatedResponse<CourseDto>>> Search(
             [FromQuery] string? searchTerm,
             [FromQuery] int page = 1,
@@ -95,21 +95,6 @@ namespace VoxFox.Controllers
             catch (System.Exception ex)
             {
                 var message = ex.Message;
-                return StatusCode(500, message);
-            }
-        }
-
-        [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseDto))]
-        public async Task<ActionResult<IList<CourseDto>>> GetAllCourses()
-        {
-            try
-            {
-                var courses = await _courseService.GetAllCoursesAsync();
-                return Ok(courses);
-            }
-            catch (Exception ex)
-            {
                 return StatusCode(500, ex.StackTrace);
             }
         }

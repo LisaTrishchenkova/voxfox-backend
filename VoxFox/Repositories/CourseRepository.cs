@@ -21,11 +21,15 @@ public class CourseRepository : ICourseRepository
             _context.Courses.Add(course);
             await _context.SaveChangesAsync();
 
+            await _context.Entry(course)
+              .Reference(c => c.Author)  // Reference - для одиночной связи
+              .LoadAsync();
+
             return course;
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex.Message);
+            _logger.LogError(ex.StackTrace);
             throw;
         }
     }
@@ -58,6 +62,7 @@ public class CourseRepository : ICourseRepository
             var courses = await _context.Courses
                 .AsNoTracking()
                 .Include(c => c.Tags)
+                .Include(c => c.Author)
                 .ToListAsync();
 
             return courses;
@@ -75,6 +80,7 @@ public class CourseRepository : ICourseRepository
         {
             var course = await _context.Courses
                 .Include(c => c.Tags)
+                .Include(c => c.Author)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             return course;
@@ -128,6 +134,14 @@ public class CourseRepository : ICourseRepository
              .AsQueryable();
     }
 
+    public IQueryable<Course> GetPublishedCoursesQuery()
+    {
+        return _context.Courses
+             .Where(c => c.Status == VoxFox.Enums.CourseStatus.Published)
+             .AsNoTracking()
+             .Include(c => c.Author)
+             .AsQueryable();
+    }
     public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
     {
         return await query
@@ -138,14 +152,19 @@ public class CourseRepository : ICourseRepository
                    Id = c.Id,
                    Title = c.Title,
                    Description = c.Description,
-                   IsPublished = c.IsPublished,
+                   Status = c.Status,
                    Tags = c.Tags != null ? c.Tags.Select(t => new TagDto
                    {
                        Name = t.Name
                    }).ToList() : new List<TagDto>(),
                    // Price = c.Price,
                    CategoryId = c.CategoryId,
-                   // CreatedAt = c.CreatedAt
+                   Author = new AuthorDto
+                  {
+                   Id = c.Author.Id,
+                   Name = c.Author.Name
+                    },
+                   PublishedAt = c.PublishedAt
                })
                .ToListAsync();
     }
