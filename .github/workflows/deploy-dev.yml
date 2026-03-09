@@ -10,12 +10,6 @@ on:
     workflows: ["CI"]
     types: [completed]
     branches: [dev]
-  push:
-    branches: ["dev"]
-    paths:
-      - "VoxFox/**/*"
-      - "Dockerfile"
-      - ".github/workflows/deploy-dev.yml"
 
 jobs:
   build-and-push:
