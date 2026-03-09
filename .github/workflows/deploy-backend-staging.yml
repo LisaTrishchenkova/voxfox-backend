@@ -131,6 +131,11 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      #   - name: Generate staging version
+      #     id: version
+      #     run: |
+      #       bash ./scripts/git_update.sh -v $VERSION_TYPE
+
       - name: Generate staging tag
         id: tag
         run: |
@@ -138,9 +143,8 @@ jobs:
           BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
           DATE=$(date -u +'%Y%m%d-%H%M')
 
-          # Очищаем имя ветки от слешей
           BRANCH_NAME_CLEAN=${BRANCH_NAME//\//-}
-          IMAGE_TAG="${BRANCH_NAME_CLEAN}-${DATE}-${SHORT_SHA}"
+          IMAGE_TAG="v0.0.1" #TODO: получать из модуля скрипта /scripts/get_version или как то так.sh
 
           echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "app_version=${IMAGE_TAG}" >> $GITHUB_OUTPUT
