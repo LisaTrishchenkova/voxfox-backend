@@ -181,15 +181,22 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_ACTIONS_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_ACTIONS_CHAT_ID }}
         run: |
-          MESSAGE="✅ *Dev deploy successful\!*
+          # Функция для экранирования специальных символов MarkdownV2
+          escape_markdown() {
+            echo "$1" | sed 's/[_*\[\]()~`>#+\-=|{}.!]/\\&/g'
+          }
 
-          📦 *Image:* \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}\`
-          🔗 *Commit:* ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }}
-          🌿 *Branch:* \`${{ github.event.workflow_run.head_branch }}\`
-          🏷️ *Tag:* \`${{ steps.tag.outputs.tag }}\`
+          # Формируем сообщение
+          MESSAGE="✅ *Dev deploy successful!*
 
-          🔍 [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          📦 *Image:* $(escape_markdown "`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}`")
+          🔗 *Commit:* $(escape_markdown "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }}")
+          🌿 *Branch:* $(escape_markdown "`${{ github.event.workflow_run.head_branch }}`")
+          🏷️ *Tag:* $(escape_markdown "`${{ steps.tag.outputs.tag }}`")
 
+          🔍 [View Run]($(escape_markdown "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"))"
+
+          # Отправляем в Telegram
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d text="${MESSAGE}" \
@@ -202,13 +209,20 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_ACTIONS_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_ACTIONS_CHAT_ID }}
         run: |
-          MESSAGE="❌ *Dev deploy failed\!*
+          # Функция для экранирования специальных символов MarkdownV2
+          escape_markdown() {
+            echo "$1" | sed 's/[_*\[\]()~`>#+\-=|{}.!]/\\&/g'
+          }
 
-          🌿 *Branch:* \`${{ github.event.workflow_run.head_branch }}\`
-          🔗 *Commit:* ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }}
+          # Формируем сообщение
+          MESSAGE="❌ *Dev deploy failed!*
 
-          ⚠️ [View Failed Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          🌿 *Branch:* $(escape_markdown "`${{ github.event.workflow_run.head_branch }}`")
+          🔗 *Commit:* $(escape_markdown "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }}")
 
+          ⚠️ [View Failed Run]($(escape_markdown "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"))"
+
+          # Отправляем в Telegram
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d text="${MESSAGE}" \
