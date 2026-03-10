@@ -33,6 +33,13 @@ jobs:
           echo "Expected commit: ${{ github.event.workflow_run.head_sha }}"
           echo "Branch: ${{ github.event.workflow_run.head_branch }}"
 
+      - name: Debug OIDC
+        run: |
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN exists: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN != '' }}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL exists: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL != '' }}"
+          echo "GITHUB_TOKEN permissions:"
+          echo "id-token: ${{ toJSON(github.token) }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
