@@ -33,13 +33,6 @@ jobs:
           echo "Expected commit: ${{ github.event.workflow_run.head_sha }}"
           echo "Branch: ${{ github.event.workflow_run.head_branch }}"
 
-      - name: Debug OIDC
-        run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN exists: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN != '' }}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL exists: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL != '' }}"
-          echo "GITHUB_TOKEN permissions:"
-          echo "id-token: ${{ toJSON(github.token) }}"
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -93,3 +86,43 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest
 
           docker buildx rm builder
+
+      - name: Notify Telegram on success
+        if: success()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_ACTIONS_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_ACTIONS_CHAT_ID }}
+        run: |
+          MESSAGE="✅ *Dev deploy successful\!*
+
+          📦 *Image:* \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}\`
+          🔗 *Commit:* ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }}
+          🌿 *Branch:* \`${{ github.event.workflow_run.head_branch }}\`
+          🏷️ *Tag:* \`${{ steps.tag.outputs.tag }}\`
+
+          🔍 [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MESSAGE}" \
+            -d parse_mode="MarkdownV2" \
+            -d disable_web_page_preview=true
+
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_ACTIONS_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_ACTIONS_CHAT_ID }}
+        run: |
+          MESSAGE="❌ *Dev deploy failed\!*
+
+          🌿 *Branch:* \`${{ github.event.workflow_run.head_branch }}\`
+          🔗 *Commit:* ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }}
+
+          ⚠️ [View Failed Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MESSAGE}" \
+            -d parse_mode="MarkdownV2" \
+            -d disable_web_page_preview=true
