@@ -28,7 +28,12 @@ namespace VoxFox
               options.AddPolicy("AllowFrontend",
                   policy =>
                   {
-                      policy.WithOrigins("https://voxfox.bafid.app", "http://localhost:5001", "http://localhost:5173")
+                      policy.WithOrigins(
+                              "http://localhost:5001",
+                              "http://localhost:5173",
+                              "https://voxfox.dev.bafid.app",
+                              "https://voxfox.staging.bafid.app",
+                              "https://voxfox.bafid.app")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();
