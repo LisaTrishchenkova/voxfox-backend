@@ -109,8 +109,8 @@ namespace VoxFox
             builder.Services.AddScoped<ILessonService, LessonService>();
             var app = builder.Build();
 
-            app.UseRouting();
             app.UseCors("AllowFrontend");
+            app.UseRouting();
 
             app.MapGet("/version", () => new
             {
