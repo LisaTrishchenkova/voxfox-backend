@@ -1,5 +1,3 @@
-
-using System.Collections;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
