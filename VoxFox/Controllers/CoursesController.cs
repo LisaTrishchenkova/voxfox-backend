@@ -67,7 +67,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpPut("{id}/publish")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseDto))]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult> PublishCourse([FromRoute] Guid id)

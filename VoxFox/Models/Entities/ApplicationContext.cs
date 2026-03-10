@@ -64,7 +64,6 @@ namespace VoxFox.Models.Entities
                     .IsRequired()
                     .HasMaxLength(100);
             });
-
             modelBuilder.Entity<Course>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -89,6 +88,7 @@ namespace VoxFox.Models.Entities
                     .IsRequired()  
                     .HasColumnType("timestamp with time zone") 
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.HasQueryFilter(c => !c.IsDeleted);
             }
             );
 
@@ -106,6 +106,7 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.CourseId)
                     .HasColumnType("uuid");
                 entity.Property(e => e.IsDeleted);
+                entity.HasQueryFilter(e => !e.IsDeleted);
             }
             );
 
@@ -123,6 +124,7 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
+                entity.HasQueryFilter(e => !e.IsDeleted);
             });
 
             modelBuilder.Entity<Category>(entity =>
@@ -134,6 +136,7 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
+                
             });
             
               modelBuilder.Entity<Author>(entity =>

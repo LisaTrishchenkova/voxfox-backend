@@ -72,11 +72,17 @@ public class CourseService : ICourseService
         return courseDTO;
     }
 
-    public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto)
+    public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto)
     {
+            
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-            throw new Exception($"Не удалось получить курс по id: {id}");
+        {
+           return ServiceResult<CourseDto>.Fail(
+                $"Курс с id: {id} не найден",
+                StatusCodes.Status404NotFound
+            );
+        }
 
         course.Title = updateCourseDto.Title ?? course.Title;
         course.Description = updateCourseDto.Description ?? course.Description;
@@ -116,7 +122,9 @@ public class CourseService : ICourseService
         }
 
         var updateCourse = await _courseRepository.UpdateAsync(course);
-        return MapToDo(updateCourse);
+        
+       return ServiceResult<CourseDto>.Ok(MapToDo(updateCourse));
+        
     }
 
     public async Task<ServiceResult<IList<SectionDto>>> GetSectionsByCourseIdAsync(Guid courseId)
