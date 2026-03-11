@@ -28,7 +28,12 @@ namespace VoxFox
               options.AddPolicy("AllowFrontend",
                   policy =>
                   {
-                      policy.WithOrigins("https://voxfox.bafid.app", "http://localhost:5001", "http://localhost:5173")
+                      policy.WithOrigins(
+                              "http://localhost:5001",
+                              "http://localhost:5173",
+                              "https://voxfox.dev.bafid.app",
+                              "https://voxfox.staging.bafid.app",
+                              "https://voxfox.bafid.app")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();
@@ -104,8 +109,8 @@ namespace VoxFox
             builder.Services.AddScoped<ILessonService, LessonService>();
             var app = builder.Build();
 
-            app.UseRouting();
             app.UseCors("AllowFrontend");
+            app.UseRouting();
 
             app.MapGet("/version", () => new
             {
@@ -140,12 +145,106 @@ namespace VoxFox
 
                 });
 
-                app.MapGet("/debug", () => new
+                app.MapGet("/debug", (HttpContext httpContext) =>
                 {
-                    Commit = Environment.GetEnvironmentVariable("GIT_COMMIT"),
-                    BuildDate = Environment.GetEnvironmentVariable("BUILD_DATE"),
-                    AllEnvVars = Environment.GetEnvironmentVariables()
-                });
+                    // Получаем все зарегистрированные CORS политики
+                    var corsOptions = app.Services.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider>();
+
+                    // Информация о текущем запросе
+                    var currentOrigin = httpContext.Request.Headers["Origin"].FirstOrDefault() ?? "нет origin";
+                    var currentMethod = httpContext.Request.Method;
+
+                    // Информация о CORS заголовках в ответе
+                    var corsHeaders = httpContext.Response.Headers
+                        .Where(h => h.Key.StartsWith("Access-Control-", StringComparison.OrdinalIgnoreCase))
+                        .ToDictionary(h => h.Key, h => h.Value.ToString());
+
+                    // Собираем информацию о всех CORS политиках
+                    var corsPolicies = new List<object>();
+
+                    // Используем рефлексию для получения зарегистрированных политик
+                    var serviceProvider = app.Services;
+                    var corsService = serviceProvider.GetService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsService>();
+
+                    // Пытаемся получить политику "AllowFrontend"
+                    var policy = app.Services.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider>()
+                        .GetPolicyAsync(httpContext, "AllowFrontend")
+                        .GetAwaiter()
+                        .GetResult();
+
+                    if (policy != null)
+                    {
+                        corsPolicies.Add(new
+                        {
+                            Name = "AllowFrontend",
+                            Origins = policy.Origins?.ToList() ?? new List<string>(),
+                            Methods = policy.Methods?.ToList() ?? new List<string>(),
+                            Headers = policy.Headers?.ToList() ?? new List<string>(),
+                            ExposedHeaders = policy.ExposedHeaders?.ToList() ?? new List<string>(),
+                            SupportsCredentials = policy.SupportsCredentials,
+                            PreflightMaxAge = policy.PreflightMaxAge?.TotalSeconds ?? 0,
+                            IsDefaultPolicy = false
+                        });
+                    }
+
+                    return new
+                    {
+                        // Информация о сборке
+                        Commit = Environment.GetEnvironmentVariable("GIT_COMMIT") ?? "не задан",
+                        BuildDate = Environment.GetEnvironmentVariable("BUILD_DATE") ?? "не задана",
+
+                        // Информация о среде
+                        Environment = app.Environment.EnvironmentName,
+                        ApplicationName = app.Environment.ApplicationName,
+                        ContentRootPath = app.Environment.ContentRootPath,
+
+                        // Информация о CORS
+                        Cors = new
+                        {
+                            CurrentRequest = new
+                            {
+                                Origin = currentOrigin,
+                                Method = currentMethod,
+                                IsPreflightRequest = httpContext.Request.Method == "OPTIONS",
+                                HasOriginHeader = httpContext.Request.Headers.ContainsKey("Origin")
+                            },
+                            ResponseHeaders = corsHeaders,
+                            ConfiguredPolicies = corsPolicies,
+                            IsPolicyApplied = corsHeaders.Any(),
+
+                            // Дополнительная отладочная информация
+                            Debug = new
+                            {
+                                // Проверяем, разрешен ли текущий origin
+                                CurrentOriginAllowed = policy?.Origins?.Contains(currentOrigin) ?? false,
+                                PolicyExists = policy != null,
+                                MiddlewareOrder = "app.UseCors() вызван до app.UseRouting()"
+                            }
+                        },
+
+                        // Все переменные окружения (VITE_ и другие)
+                        AllEnvVars = Environment.GetEnvironmentVariables()
+                            .Cast<System.Collections.DictionaryEntry>()
+                            .ToDictionary(
+                                kv => kv.Key.ToString() ?? "",
+                                kv => kv.Value?.ToString() ?? ""
+                            ),
+
+                        // Информация о всех зарегистрированных endpoint'ах
+                        Endpoints = app.Services.GetService<Microsoft.AspNetCore.Routing.EndpointDataSource>()?.Endpoints
+                            .Select(e => e.DisplayName)
+                            .Where(name => !string.IsNullOrEmpty(name))
+                            .ToList() ?? new List<string?>(),
+
+                        // Заголовки запроса
+                        RequestHeaders = httpContext.Request.Headers
+                            .ToDictionary(h => h.Key, h => h.Value.ToString()),
+
+                        Timestamp = DateTime.UtcNow
+                    };
+                })
+                .WithName("Debug")
+                .WithDisplayName("Debug endpoint with CORS info");
             }
             //app.UseHttpsRedirection();
 
