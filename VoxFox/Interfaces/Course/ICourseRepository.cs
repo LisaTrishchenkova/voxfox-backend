@@ -11,6 +11,7 @@ public interface ICourseRepository
     Task<IList<Section>> GetSectionsByCourseIdAsync(Guid courseId);
 
     IQueryable<Course> GetCoursesQuery();
+    IQueryable<Course> GetPublishedCoursesQuery();
     Task<List<CourseDto>> GetCoursesWithProjectionAsync(
             IQueryable<Course> query,
             int skip,

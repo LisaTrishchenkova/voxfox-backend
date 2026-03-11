@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using VoxFox.Enums;
 
 namespace VoxFox.Models.Entities
 {
@@ -10,6 +11,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Tag> Tags { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Category> Categories { get; set; }
+        public DbSet<Author> Authors { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -37,9 +39,15 @@ namespace VoxFox.Models.Entities
 
             modelBuilder.Entity<Course>()
                 .HasOne(c => c.Category)
-                .WithMany()
+                .WithMany(c => c.Courses)
                 .HasForeignKey(c => c.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Course>()
+               .HasOne(c => c.Author)
+               .WithMany(a => a.Courses)
+               .HasForeignKey(c => c.AuthorId)
+               .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<User>(entity =>
             {
@@ -56,7 +64,6 @@ namespace VoxFox.Models.Entities
                     .IsRequired()
                     .HasMaxLength(100);
             });
-
             modelBuilder.Entity<Course>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -70,8 +77,18 @@ namespace VoxFox.Models.Entities
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(e => e.IsDeleted);
-                entity.Property(e => e.IsPublished);
+                entity.Property(e => e.Status)
+                    .HasConversion<string>()
+                    .HasDefaultValue(CourseStatus.Draft);
                 entity.Property(e => e.CategoryId);
+                entity.Property(e => e.AuthorId)
+                    .IsRequired(false);
+
+                entity.Property(e => e.PublishedAt)
+                    .IsRequired()
+                    .HasColumnType("timestamp with time zone")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.HasQueryFilter(c => !c.IsDeleted);
             }
             );
 
@@ -89,6 +106,7 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.CourseId)
                     .HasColumnType("uuid");
                 entity.Property(e => e.IsDeleted);
+                entity.HasQueryFilter(e => !e.IsDeleted);
             }
             );
 
@@ -106,6 +124,7 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
+                entity.HasQueryFilter(e => !e.IsDeleted);
             });
 
             modelBuilder.Entity<Category>(entity =>
@@ -117,7 +136,22 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
+
             });
+
+            modelBuilder.Entity<Author>(entity =>
+           {
+               entity.HasKey(e => e.Id);
+
+               entity.Property(e => e.Name)
+                        .IsRequired()
+                       .HasMaxLength(200);
+
+               entity.Property(e => e.Id)
+                       .HasColumnType("uuid")
+                       .HasDefaultValueSql("gen_random_uuid()");
+           });
+
             base.OnModelCreating(modelBuilder);
         }
 

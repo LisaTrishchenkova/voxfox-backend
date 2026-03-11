@@ -1,10 +1,9 @@
 namespace VoxFox.Models.Entities
 {
-    public class Category
+    public class Author
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = null!;
-
-        public ICollection<Course>? Courses { get; set; }
+         public ICollection<Course> Courses { get; set; }
     }
 }

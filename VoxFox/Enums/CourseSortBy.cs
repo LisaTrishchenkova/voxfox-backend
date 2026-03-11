@@ -3,6 +3,8 @@ namespace VoxFox.Enums
     public enum CoursesSortBy
     {
         Relevance,
-        Title
+        Title,
+        Date,
+        DateDesc 
     }
 }
