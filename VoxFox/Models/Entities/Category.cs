@@ -4,5 +4,7 @@ namespace VoxFox.Models.Entities
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = null!;
+
+        public ICollection<Course>? Courses { get; set; }
     }
 }
