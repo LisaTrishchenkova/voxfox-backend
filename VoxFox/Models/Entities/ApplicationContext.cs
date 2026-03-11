@@ -39,15 +39,15 @@ namespace VoxFox.Models.Entities
 
             modelBuilder.Entity<Course>()
                 .HasOne(c => c.Category)
-                .WithMany()
+                .WithMany(c => c.Courses)
                 .HasForeignKey(c => c.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
-       
-             modelBuilder.Entity<Course>()
-                .HasOne(c => c.Author)
-                .WithMany(a => a.Courses)
-                .HasForeignKey(c => c.AuthorId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Course>()
+               .HasOne(c => c.Author)
+               .WithMany(a => a.Courses)
+               .HasForeignKey(c => c.AuthorId)
+               .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<User>(entity =>
             {
@@ -83,10 +83,10 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.CategoryId);
                 entity.Property(e => e.AuthorId)
                     .IsRequired(false);
-                
+
                 entity.Property(e => e.PublishedAt)
-                    .IsRequired()  
-                    .HasColumnType("timestamp with time zone") 
+                    .IsRequired()
+                    .HasColumnType("timestamp with time zone")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.HasQueryFilter(c => !c.IsDeleted);
             }
@@ -136,21 +136,21 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
-                
+
             });
-            
-              modelBuilder.Entity<Author>(entity =>
-             {
-                 entity.HasKey(e => e.Id);
-        
-                entity.Property(e => e.Name)
-                       .IsRequired()
-                      .HasMaxLength(200);
-            
-                entity.Property(e => e.Id)
-                      .HasColumnType("uuid")
-                      .HasDefaultValueSql("gen_random_uuid()");
-             });
+
+            modelBuilder.Entity<Author>(entity =>
+           {
+               entity.HasKey(e => e.Id);
+
+               entity.Property(e => e.Name)
+                        .IsRequired()
+                       .HasMaxLength(200);
+
+               entity.Property(e => e.Id)
+                       .HasColumnType("uuid")
+                       .HasDefaultValueSql("gen_random_uuid()");
+           });
 
             base.OnModelCreating(modelBuilder);
         }
