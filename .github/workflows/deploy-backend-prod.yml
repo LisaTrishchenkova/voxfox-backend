@@ -1,0 +1,270 @@
+# name: Build and Push Backend to ECR (PRODUCTION)
+
+# env:
+#   AWS_REGION: eu-north-1
+#   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+#   ECR_REPOSITORY: voxfox-backend-prod
+
+# on:
+#   push:
+#     tags:
+#       - "v*"
+#   workflow_dispatch:
+#     inputs:
+#       version:
+#         description: "Version tag (e.g., v1.2.3)"
+#         required: true
+#         type: string
+
+# permissions:
+#   id-token: write
+#   contents: write
+
+# jobs:
+#   version:
+#     runs-on: ubuntu-latest
+#     if: github.event_name == 'workflow_dispatch'
+#     outputs:
+#       tag: ${{ steps.version.outputs.new-tag }}
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+#           token: ${{ secrets.GITHUB_TOKEN }}
+
+#       - name: Create version tag
+#         id: version
+#         run: |
+#           if [[ "${{ github.event.inputs.version }}" != "" ]]; then
+#             echo "new-tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+#           else
+#             echo "No version specified" && exit 1
+#           fi
+
+#   build-and-push:
+#     needs: version
+#     runs-on: ubuntu-latest
+#     environment: production
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ github.ref }}
+#           fetch-depth: 2
+
+#       - name: Setup .NET
+#         uses: actions/setup-dotnet@v4
+#         with:
+#           dotnet-version: "9.0.x"
+
+#       - name: Restore dependencies
+#         run: cd VoxFox && dotnet restore
+
+#       - name: Build
+#         run: cd VoxFox && dotnet build --configuration Release --no-restore
+
+#       - name: Test
+#         run: cd VoxFox && dotnet test --configuration Release --no-build --verbosity normal
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           audience: sts.amazonaws.com
+#           aws-region: ${{ env.AWS_REGION }}
+#           role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v2
+
+#       - name: Build and push PRODUCTION image
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           IMAGE_TAG: ${{ needs.version.outputs.tag }}
+#         run: |
+#           # Setup buildx
+#           docker buildx create --use --name builder
+#           docker buildx inspect builder --bootstrap
+
+#           # Build with buildx
+#           docker buildx build \
+#             --target production \
+#             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+#             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+#             --load \
+#             -f Dockerfile .
+
+#           # Push to ECR
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+#           # Cleanup
+#           docker buildx rm builder
+
+#       - name: Create GitHub Release
+#         uses: softprops/action-gh-release@v1
+#         with:
+#           tag_name: ${{ needs.version.outputs.tag }}
+#           generate_release_notes: true
+
+name: Build and Deploy Backend to PRODUCTION
+
+env:
+  AWS_REGION: eu-north-1
+  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
+
+on:
+  workflow_dispatch: # ✅ Только ручной запуск!
+    inputs:
+      version:
+        description: "Version to deploy (v*.*.* or commit SHA)"
+        required: true
+        type: string
+      confirm:
+        description: "⚠️ PRODUCTION DEPLOYMENT - Are you ABSOLUTELY sure?"
+        required: true
+        default: "no"
+        type: choice
+        options:
+          - "no"
+          - "yes"
+
+concurrency:
+  group: deploy-backend-prod
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    if: ${{ github.event.inputs.confirm == 'yes' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+      image_url: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Generate production tag
+        id: tag
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +'%Y%m%d-%H%M')
+
+          # Если версия в формате v*, используем её, иначе создаем
+          if [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            IMAGE_TAG="${VERSION}"
+          else
+            IMAGE_TAG="prod-${DATE}-${SHORT_SHA}"
+          fi
+
+          echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "debug_tag=prod-${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "app_version=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "commit=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+          echo "🚀 Production version: ${IMAGE_TAG}"
+
+      - name: Build and push PRODUCTION image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          APP_VERSION: ${{ steps.tag.outputs.app_version }}
+          GIT_COMMIT: ${{ steps.tag.outputs.commit }}
+          BUILD_DATE: ${{ steps.tag.outputs.build_date }}
+        run: |
+          # Production build
+          docker buildx create --use --name builder
+          docker buildx inspect builder --bootstrap
+
+          docker buildx build \
+            --target production \  # ✅ production target!
+            --build-arg APP_VERSION=${APP_VERSION} \
+            --build-arg GIT_COMMIT=${GIT_COMMIT} \
+            --build-arg BUILD_DATE=${BUILD_DATE} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:prod-latest \
+            --load \
+            -f Dockerfile .
+
+          # Push images
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod-latest
+
+          docker buildx rm builder
+
+      - name: Create GitHub Release
+        if: ${{ startsWith(github.event.inputs.version, 'v') }} # ✅ Только для версий v*
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: Release ${{ github.event.inputs.version }}
+          body: |
+            🚀 **Production Release ${{ github.event.inputs.version }}**
+
+            **Deployed by:** @${{ github.actor }}
+            **Docker Image:** `${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}`
+
+            [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          draft: false
+          prerelease: false
+
+      - name: Notify success
+        if: success()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            🚀 **PRODUCTION BACKEND DEPLOYED SUCCESSFULLY!**
+
+            **Version:** `${{ steps.tag.outputs.tag }}`
+            **Deployed by:** @${{ github.actor }}
+            **Commit:** [`${{ steps.tag.outputs.commit }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.inputs.version }})
+
+            🔗 **Links:**
+            • 📦 **ECR Image:** `${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}`
+            • 🏷️ **Git Tag:** ${{ github.event.inputs.version }}
+
+            [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "🔄 CRITICAL: Production deployment failed! Check manually!"
+          # Здесь можно добавить уведомление в Slack/Telegram
+
+      - name: Notify failure
+        if: failure()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ❌ **PRODUCTION BACKEND DEPLOYMENT FAILED!**
+
+            **Version:** `${{ steps.tag.outputs.tag }}`
+            **Deployed by:** @${{ github.actor }}
+            **Commit:** [`${{ steps.tag.outputs.commit }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.inputs.version }})
+
+            **Action required:** Investigate immediately!
+
+            [View failed run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
