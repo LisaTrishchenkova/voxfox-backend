@@ -23,6 +23,7 @@ namespace VoxFox.Services
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, email)
             };
+
             return claims;
         }
 

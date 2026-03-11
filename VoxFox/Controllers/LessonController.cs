@@ -3,7 +3,6 @@ using Microsoft.VisualBasic;
 using System.ComponentModel.DataAnnotations;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
-using VoxFox.Services;
 
 namespace VoxFox.Controllers
 {
@@ -90,7 +89,7 @@ namespace VoxFox.Controllers
 
                 return NoContent();
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }

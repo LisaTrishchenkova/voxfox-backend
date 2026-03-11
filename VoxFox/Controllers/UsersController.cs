@@ -34,5 +34,24 @@ namespace VoxFox.Controllers
             };
             return Ok(userResponse);
         }
+
+        [HttpGet("{id}/test")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserResponse))]
+        public async Task<IActionResult> GetTestUserById(
+            [FromRoute] Guid id
+        )
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound("Пользователь не найден");
+            }
+            var userResponse = new UserResponse
+            {
+                Name = user.Name,
+                Email = user.Email
+            };
+            return Ok(userResponse);
+        }
     }
 }
