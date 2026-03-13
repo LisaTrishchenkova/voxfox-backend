@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release \
+            @semantic-release/github \
+            @semantic-release/commit-analyzer \
+            @semantic-release/release-notes-generator
+
+      - name: Semantic Release
+        id: release
+        uses: cycjimmy/semantic-release-action@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.release.outputs.new_release_published }}" == "true" ]; then
+            echo "### 🚀 New release: ${{ steps.release.outputs.new_release_git_tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "Now deploy: Actions → Deploy Production → ${{ steps.release.outputs.new_release_git_tag }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ℹ️ No release needed" >> $GITHUB_STEP_SUMMARY
+          fi
