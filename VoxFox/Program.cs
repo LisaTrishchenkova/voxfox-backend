@@ -1,19 +1,14 @@
-
-
-using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using System.Security.Cryptography.Xml;
 using System.Text.Json.Serialization;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using VoxFox.Interfaces;
 using VoxFox.Services;
 using VoxFox.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Repositories;
 using VoxFox.Interfaces.Section;
+using Microsoft.OpenApi;
 
 namespace VoxFox
 {
@@ -30,7 +25,6 @@ namespace VoxFox
                   {
                       policy.WithOrigins(
                               "http://localhost:5001",
-                              "http://localhost:5173",
                               "https://voxfox.dev.bafid.app",
                               "https://voxfox.staging.bafid.app",
                               "https://voxfox.bafid.app")
