@@ -62,7 +62,7 @@ namespace VoxFox.Controllers
         public async Task<ActionResult<CategoryDto>> UpdateCategory(Guid id, CreateCategoryDto updateCategoryDto)
         {
             var category = await _context.Categories.FindAsync(id);
-            
+
             if (category == null)
             {
                 return NotFound($"Категория с ID {id} не найдена");
@@ -92,7 +92,7 @@ namespace VoxFox.Controllers
         public async Task<IActionResult> DeleteCategory(Guid id)
         {
             var category = await _context.Categories.FindAsync(id);
-            
+
             if (category == null)
             {
                 return NotFound($"Категория с ID {id} не найдена");
