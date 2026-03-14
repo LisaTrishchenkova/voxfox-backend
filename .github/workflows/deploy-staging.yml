@@ -1,10 +1,5 @@
 name: Build and Push to ECR (STAGING)
 
-env:
-  AWS_REGION: eu-north-1
-  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
-  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
-
 on:
   workflow_run:
     workflows: ["CI"]
@@ -14,7 +9,7 @@ on:
 jobs:
   build-and-push:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
+    environment: staging
     runs-on: ubuntu-24.04
     permissions:
       id-token: write
@@ -22,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -31,8 +26,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           audience: sts.amazonaws.com
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
 
       - name: Login to Amazon ECR
         id: login-ecr
