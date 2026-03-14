@@ -1,10 +1,5 @@
 name: Deploy Backend Production
 
-env:
-  AWS_REGION: eu-north-1
-  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
-  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
-
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +13,7 @@ on:
         type: string
 
 concurrency:
-  group: deploy-backend-prod
+  group: deploy-prod
   cancel-in-progress: false
 
 jobs:
@@ -63,8 +58,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           audience: sts.amazonaws.com
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -117,7 +112,7 @@ jobs:
         run: |
           if [ "${{ job.status }}" == "success" ]; then
             echo "### ✅ Backend deployed: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
-            echo "**Image:** ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Image:** ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ Backend deployment FAILED — rollback triggered" >> $GITHUB_STEP_SUMMARY
           fi
