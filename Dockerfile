@@ -56,7 +56,7 @@ COPY . .
 RUN dotnet test --configuration Release --verbosity normal --no-restore
 
 # ============ STAGING ============
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS staging
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS staging
 
 ARG APP_VERSION
 ARG GIT_COMMIT
@@ -89,7 +89,7 @@ EXPOSE 80
 ENTRYPOINT ["dotnet", "VoxFox.dll"]
 
 # ============ PRODUCTION ============
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS production
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS production
 
 ARG APP_VERSION
 ARG GIT_COMMIT
