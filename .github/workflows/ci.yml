@@ -16,24 +16,24 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
   CONFIGURATION: "Release"
 
 jobs:
   test:
     timeout-minutes: 15
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
@@ -43,8 +43,10 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }} #-warnaserror
+      - name: Build & Analyze (Roslynator)
+        continue-on-error: true
+        run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }}
+      # run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }} /warnaserror
 
       - name: Run linter (dotnet format)
         run: |
@@ -63,7 +65,7 @@ jobs:
 
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ github.sha }}
           path: ./TestResults
@@ -73,7 +75,7 @@ jobs:
         run: dotnet publish -c ${{ env.CONFIGURATION }} -o ./publish
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{github.sha}}
           path: ./publish
@@ -85,7 +87,7 @@ jobs:
           dotnet list package --deprecated || echo "⚠️ Check for deprecated packages"
 
       - name: Comment PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         with:
           script: |

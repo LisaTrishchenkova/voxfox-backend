@@ -1,10 +1,5 @@
 name: Build and Push to ECR (DEV)
 
-env:
-  AWS_REGION: eu-north-1
-  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
-  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
-
 on:
   workflow_run:
     workflows: ["CI"]
@@ -14,15 +9,15 @@ on:
 jobs:
   build-and-push:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
-    runs-on: ubuntu-22.04
+    environment: dev
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -34,11 +29,11 @@ jobs:
           echo "Branch: ${{ github.event.workflow_run.head_branch }}"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           audience: sts.amazonaws.com
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
 
       - name: Login to Amazon ECR
         id: login-ecr
