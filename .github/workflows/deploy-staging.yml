@@ -1,4 +1,4 @@
-name: Build and Push to ECR (DEV)
+name: Build and Push to ECR (STAGING)
 
 env:
   AWS_REGION: eu-north-1
@@ -9,7 +9,7 @@ on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-    branches: [dev]
+    branches: [staging]
 
 jobs:
   build-and-push:
@@ -24,14 +24,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Show checkout info
-        run: |
-          echo "Checked out commit: $(git rev-parse HEAD)"
-          echo "Expected commit: ${{ github.event.workflow_run.head_sha }}"
-          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -44,45 +38,44 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Generate dev tag
+      - name: Generate staging tag
         id: tag
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
           DATE=$(date -u +'%Y%m%d-%H%M')
-
-          # Очищаем имя ветки от слешей
-          BRANCH_NAME_CLEAN=${BRANCH_NAME//\//-}
-          IMAGE_TAG="${BRANCH_NAME_CLEAN}-${DATE}-${SHORT_SHA}"
+          IMAGE_TAG="staging-${DATE}-${SHORT_SHA}"
 
           echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "app_version=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "commit=${SHORT_SHA}" >> $GITHUB_OUTPUT
-          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
-      - name: Build and push DEV image
+      - name: Build and push STAGING image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
-          APP_VERSION: ${{ steps.tag.outputs.app_version }}
-          GIT_COMMIT: ${{ steps.tag.outputs.commit }}
-          BUILD_DATE: ${{ steps.tag.outputs.build_date }}
         run: |
           docker buildx create --use --name builder
           docker buildx inspect builder --bootstrap
 
           docker buildx build \
-            --target development \
-            --build-arg APP_VERSION=${APP_VERSION} \
-            --build-arg GIT_COMMIT=${GIT_COMMIT} \
-            --build-arg BUILD_DATE=${BUILD_DATE} \
+            --target staging \
+            --build-arg APP_VERSION=${{ steps.tag.outputs.tag }} \
+            --build-arg GIT_COMMIT=${{ steps.tag.outputs.short_sha }} \
+            --build-arg BUILD_DATE=${{ steps.tag.outputs.build_date }} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest \
             --load \
             -f Dockerfile .
 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
 
           docker buildx rm builder
+
+          
+      - name: Summary
+        if: always()
+        run: |
+          echo "### 📦 Staging image pushed" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ steps.tag.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY

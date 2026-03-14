@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 # ============ VERSIONING ============
 ARG APP_VERSION
@@ -24,7 +24,7 @@ RUN dotnet clean && \
     rm -rf /root/.nuget/packages/*
 
 # ============ DEVELOPMENT ============
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS development
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS development
 
 ARG APP_VERSION
 ARG GIT_COMMIT
@@ -41,7 +41,7 @@ ENV DOTNET_WATCH=1
 ENTRYPOINT ["dotnet", "watch", "run", "--project", "VoxFox", "--no-launch-profile"]
 
 # ============ TESTING ============
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS testing
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS testing
 
 ARG APP_VERSION
 ARG GIT_COMMIT
@@ -56,7 +56,7 @@ COPY . .
 RUN dotnet test --configuration Release --verbosity normal --no-restore
 
 # ============ STAGING ============
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS staging
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS staging
 
 ARG APP_VERSION
 ARG GIT_COMMIT
@@ -89,7 +89,7 @@ EXPOSE 80
 ENTRYPOINT ["dotnet", "VoxFox.dll"]
 
 # ============ PRODUCTION ============
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS production
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS production
 
 ARG APP_VERSION
 ARG GIT_COMMIT
