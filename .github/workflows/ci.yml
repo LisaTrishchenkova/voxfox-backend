@@ -16,13 +16,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
   CONFIGURATION: "Release"
 
 jobs:
   test:
     timeout-minutes: 15
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v5

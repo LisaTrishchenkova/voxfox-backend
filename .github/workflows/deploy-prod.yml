@@ -1,0 +1,123 @@
+name: Deploy Backend Production
+
+env:
+  AWS_REGION: eu-north-1
+  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+  ECR_REPOSITORY: lisatrishchenkova/voxfox-practice-backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to deploy (e.g. v1.2.3)"
+        required: true
+        type: string
+      confirm:
+        description: "Type YES to confirm prod deployment"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-backend-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event.inputs.confirm == 'YES' }}
+    environment: production
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Validate inputs
+        run: |
+          if [ "${{ inputs.confirm }}" != "YES" ]; then
+            echo "❌ Type exactly YES to confirm"
+            exit 1
+          fi
+
+          if [[ ! "${{ inputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Tag must be format v1.2.3, got: ${{ inputs.tag }}"
+            exit 1
+          fi
+
+          echo "✅ Deploying ${{ inputs.tag }}"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Extract version info
+        id: version
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_date=${BUILD_DATE}" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: |
+          docker buildx create --use --name builder
+          docker buildx inspect builder --bootstrap
+
+          docker buildx build \
+            --target production \
+            --build-arg APP_VERSION=${{ inputs.tag }} \
+            --build-arg GIT_COMMIT=${{ steps.version.outputs.short_sha }} \
+            --build-arg BUILD_DATE=${{ steps.version.outputs.build_date }} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            --load \
+            -f Dockerfile .
+
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          docker buildx rm builder
+
+      - name: Deploy to Kubernetes
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: |
+          # Обновляем image в k8s deployment
+          kubectl set image deployment/voxfox-backend \
+            backend=$ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
+
+          # Ждём rollout
+          kubectl rollout status deployment/voxfox-backend --timeout=120s
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "🔄 Rolling back kubernetes deployment"
+          kubectl rollout undo deployment/voxfox-backend
+          kubectl rollout status deployment/voxfox-backend --timeout=120s
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "### ✅ Backend deployed: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Image:** ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Backend deployment FAILED — rollback triggered" >> $GITHUB_STEP_SUMMARY
+          fi
