@@ -34,7 +34,7 @@ jobs:
           echo "Branch: ${{ github.event.workflow_run.head_branch }}"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
