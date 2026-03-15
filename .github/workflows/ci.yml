@@ -72,7 +72,7 @@ jobs:
           retention-days: 30
 
       - name: Publish
-        run: dotnet publish -c ${{ env.CONFIGURATION }} -o ./publish
+        run: dotnet publish VoxFox/VoxFox.csproj -c ${{ env.CONFIGURATION }} -o ./publish
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
