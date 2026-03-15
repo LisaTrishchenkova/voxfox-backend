@@ -79,6 +79,7 @@ RUN apk add --no-cache \
     postgresql-client \
     redis \
     bash \
+    krb5-libs \
     && rm -rf /var/cache/apk/* \
     && echo "PS1='\u@\h:\w\$ '" >> /etc/profile
 
@@ -103,6 +104,10 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 ENV ASPNETCORE_ENVIRONMENT=Production
+
+RUN apk add --no-cache \
+    krb5-libs \
+    && rm -rf /var/cache/apk/*
 
 USER $APP_UID
 
