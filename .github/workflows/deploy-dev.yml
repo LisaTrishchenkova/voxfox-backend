@@ -59,6 +59,7 @@ jobs:
       - name: Build and push DEV image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           APP_VERSION: ${{ steps.tag.outputs.app_version }}
           GIT_COMMIT: ${{ steps.tag.outputs.commit }}
