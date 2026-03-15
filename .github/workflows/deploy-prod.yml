@@ -12,6 +12,9 @@ on:
         required: true
         type: string
 
+env:
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+
 concurrency:
   group: deploy-prod
   cancel-in-progress: false
