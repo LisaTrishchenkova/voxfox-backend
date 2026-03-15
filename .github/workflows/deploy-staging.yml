@@ -47,6 +47,7 @@ jobs:
       - name: Build and push STAGING image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
         run: |
           docker buildx create --use --name builder
@@ -58,12 +59,10 @@ jobs:
             --build-arg GIT_COMMIT=${{ steps.tag.outputs.short_sha }} \
             --build-arg BUILD_DATE=${{ steps.tag.outputs.build_date }} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest \
             --load \
             -f Dockerfile .
 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
 
           docker buildx rm builder
 
