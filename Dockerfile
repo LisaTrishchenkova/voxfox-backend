@@ -26,6 +26,9 @@ RUN dotnet clean && \
 # ============ DEVELOPMENT ============
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS development
 
+EXPOSE 8080
+EXPOSE 9090
+
 ARG APP_VERSION
 ARG GIT_COMMIT
 ARG BUILD_DATE
@@ -43,6 +46,9 @@ ENTRYPOINT ["dotnet", "watch", "run", "--project", "VoxFox", "--no-launch-profil
 # ============ TESTING ============
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS testing
 
+EXPOSE 8080
+EXPOSE 9090
+
 ARG APP_VERSION
 ARG GIT_COMMIT
 ARG BUILD_DATE
@@ -57,6 +63,9 @@ RUN dotnet test --configuration Release --verbosity normal --no-restore
 
 # ============ STAGING ============
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS staging
+
+EXPOSE 8080
+EXPOSE 9090
 
 ARG APP_VERSION
 ARG GIT_COMMIT
@@ -91,6 +100,9 @@ ENTRYPOINT ["dotnet", "VoxFox.dll"]
 
 # ============ PRODUCTION ============
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS production
+
+EXPOSE 8080
+EXPOSE 9090
 
 ARG APP_VERSION
 ARG GIT_COMMIT
