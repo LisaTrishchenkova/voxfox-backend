@@ -1,4 +1,4 @@
-name: Deploy Backend Production
+name: Deploy Backend Production to ECR
 
 on:
   workflow_dispatch:
@@ -92,31 +92,12 @@ jobs:
 
           docker buildx rm builder
 
-      - name: Deploy to Kubernetes
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ inputs.tag }}
-        run: |
-          # Обновляем image в k8s deployment
-          kubectl set image deployment/voxfox-backend \
-            backend=$ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-
-          # Ждём rollout
-          kubectl rollout status deployment/voxfox-backend --timeout=120s
-
-      - name: Auto-rollback on failure
-        if: failure()
-        run: |
-          echo "🔄 Rolling back kubernetes deployment"
-          kubectl rollout undo deployment/voxfox-backend
-          kubectl rollout status deployment/voxfox-backend --timeout=120s
-
       - name: Summary
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
-            echo "### ✅ Backend deployed: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Image pushed: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
             echo "**Image:** ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ❌ Backend deployment FAILED — rollback triggered" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Build/push FAILED" >> $GITHUB_STEP_SUMMARY
           fi
