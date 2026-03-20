@@ -1,5 +1,3 @@
-# VoxFox-practice
-
 ## Environments
 
 | Environment | URL                                  | Branch    |
