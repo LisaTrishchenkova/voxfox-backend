@@ -247,11 +247,10 @@ namespace VoxFox
             // app.UseAuthorization();
 
             app.UseHttpMetrics();
-            
             app.MapControllers();
-
-            app.MapMetrics();
-            
+            app.MapMetrics("/metrics").RequireHost("*:9090");
+            app.Urls.Add("http://+:9090");
+            app.Urls.Add("http://+:8080");
             app.Run();
         }
 
