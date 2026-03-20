@@ -82,3 +82,12 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:dev-latest
 
           docker buildx rm builder
+
+
+          - name: Summary
+      - if: always()
+        run: |
+          echo "### 📦 Dev image pushed" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ steps.tag.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ steps.tag.outputs.branch }}" >> $GITHUB_STEP_SUMMARY
