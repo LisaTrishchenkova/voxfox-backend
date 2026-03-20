@@ -84,9 +84,8 @@ jobs:
 
           docker buildx rm builder
 
-
-          - name: Summary
-      - if: always()
+      - name: Summary
+        if: always()
         run: |
           echo "### 📦 Dev image pushed" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
