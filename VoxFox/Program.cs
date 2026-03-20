@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using VoxFox.Repositories;
 using VoxFox.Interfaces.Section;
 using Microsoft.OpenApi;
+using Prometheus;
 
 namespace VoxFox
 {
@@ -245,8 +246,12 @@ namespace VoxFox
             // app.UseAuthentication();
             // app.UseAuthorization();
 
+            app.UseHttpMetrics();
+            
             app.MapControllers();
 
+            app.MapMetrics();
+            
             app.Run();
         }
 
