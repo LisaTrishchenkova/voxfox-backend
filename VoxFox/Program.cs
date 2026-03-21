@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
 using VoxFox.Services;
 using VoxFox.Models.Entities;
@@ -112,14 +113,13 @@ namespace VoxFox
             {
                 options.ReduceStatusCodeCardinality();
             });
-
             app.MapGet("/version", () => new
             {
                 Version = Environment.GetEnvironmentVariable("APP_VERSION"),
                 Environment = app.Environment.EnvironmentName
-            });
+            }).DisableHttpMetrics();
 
-            app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+            app.MapGet("/healthz", () => Results.Ok(new { status = "alive" })).DisableHttpMetrics();
 
             app.MapGet("/health", () => new
             {
@@ -127,10 +127,22 @@ namespace VoxFox
                 Version = Environment.GetEnvironmentVariable("APP_VERSION"),
                 // Database = CheckDatabase() ? "connected" : "disconnected",
                 Timestamp = DateTime.UtcNow
-            });
+            }).DisableHttpMetrics();
 
             if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
+                app.Use(async (context, next) =>
+                {
+                    var path = context.Request.Path.Value ?? "";
+                    if (path.StartsWith("/swagger") || path.StartsWith("/api-docs"))
+                    {
+                        var metricsFeature = context.Features.Get<IHttpMetricsTagsFeature>();
+                        if (metricsFeature != null)
+                            metricsFeature.MetricsDisabled = true;
+                    }
+                    await next();
+                });
+                
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
@@ -243,7 +255,7 @@ namespace VoxFox
 
                         Timestamp = DateTime.UtcNow
                     };
-                })
+                }).DisableHttpMetrics()
                 .WithName("Debug")
                 .WithDisplayName("Debug endpoint with CORS info");
             }
