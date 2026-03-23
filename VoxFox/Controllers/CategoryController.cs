@@ -34,7 +34,7 @@ namespace VoxFox.Controllers
         public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto createCategoryDto)
         {
             var existingCategory = await _context.Categories
-                .AnyAsync(c => c.Name.ToLower() == createCategoryDto.Name.ToLower());
+                .AnyAsync(c => string.Equals(c.Name, createCategoryDto.Name, StringComparison.OrdinalIgnoreCase));
 
             if (existingCategory)
             {
@@ -69,7 +69,7 @@ namespace VoxFox.Controllers
             }
 
             var existingCategory = await _context.Categories
-                .AnyAsync(c => c.Name.ToLower() == updateCategoryDto.Name.ToLower() && c.Id != id);
+                .AnyAsync(c => string.Equals(c.Name, updateCategoryDto.Name, StringComparison.OrdinalIgnoreCase) && c.Id != id);
 
             if (existingCategory)
             {

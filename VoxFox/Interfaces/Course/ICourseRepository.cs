@@ -1,21 +1,24 @@
+using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
+
+namespace VoxFox.Interfaces.Course;
 
 public interface ICourseRepository
 {
-    Task<IList<Course>?> GetAllAsync();
-    Task<Course?> GetByIdAsync(Guid id);
-    Task<Course> AddAsync(Course course);
-    Task<Course> UpdateAsync(Course course);
-    Task<bool> DeleteSoftAsync(Course course);
+    Task<IList<Models.Entities.Course>?> GetAllAsync();
+    Task<Models.Entities.Course?> GetByIdAsync(Guid id);
+    Task<Models.Entities.Course> AddAsync(Models.Entities.Course course);
+    Task<Models.Entities.Course> UpdateAsync(Models.Entities.Course course);
+    Task<bool> DeleteSoftAsync(Models.Entities.Course course);
     Task<bool> ExistCourseByIdAsync(Guid id);
-    Task<IList<Section>> GetSectionsByCourseIdAsync(Guid courseId);
+    Task<IList<Models.Entities.Section>> GetSectionsByCourseIdAsync(Guid courseId);
 
-    IQueryable<Course> GetCoursesQuery();
-    IQueryable<Course> GetPublishedCoursesQuery();
+    IQueryable<Models.Entities.Course> GetCoursesQuery();
+    IQueryable<Models.Entities.Course> GetPublishedCoursesQuery();
     Task<List<CourseDto>> GetCoursesWithProjectionAsync(
-            IQueryable<Course> query,
-            int skip,
-            int take);
-    Task<int> GetTotalCountAsync(IQueryable<Course> query);
+        IQueryable<Models.Entities.Course> query,
+        int skip,
+        int take);
+    Task<int> GetTotalCountAsync(IQueryable<Models.Entities.Course> query);
     Task DeleteTagAsync(Tag existingTag);
 }

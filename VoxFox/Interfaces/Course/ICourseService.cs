@@ -1,10 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using VoxFox.Models.DTOs;
-using VoxFox;
-using VoxFox.Models.Entities;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using VoxFox.Models.Requests;
+using VoxFox.Models.Responses;
+
+namespace VoxFox.Interfaces.Course;
 
 public interface ICourseService
 {

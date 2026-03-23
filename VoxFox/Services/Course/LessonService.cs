@@ -1,10 +1,8 @@
-
-using System.Collections;
-using VoxFox.Interfaces.Section;
+using VoxFox.Interfaces.Lesson;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
-namespace VoxFox.Services
+namespace VoxFox.Services.Course
 {
     public class LessonService : ILessonService
     {
@@ -37,17 +35,10 @@ namespace VoxFox.Services
                 };
 
                 var createLesson = await _lessonRepository.AddAsync(lesson);
-                if (createLesson == null)
-                {
-                    return ServiceResult<LessonDto>.Fail(
-                        $"Не удалось создать урок",
-                        StatusCodes.Status404NotFound
-                    );
-                }
 
                 return ServiceResult<LessonDto>.Created(MapToDo(createLesson));
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<LessonDto>.Fail(
                     $"Ошибка при создании урока: {ex.Message}",
@@ -70,7 +61,7 @@ namespace VoxFox.Services
 
                 return ServiceResult<bool>.Ok(true, "Урок успешно удален");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<bool>.Fail(
                      $"Ошибка при удалении урока: {ex.Message}",
@@ -94,7 +85,7 @@ namespace VoxFox.Services
 
                 return ServiceResult<LessonDto?>.Ok(MapToDo(lesson));
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<LessonDto?>.Fail(
                     $"Ошибка при получении урока: {ex.Message}",
@@ -121,17 +112,10 @@ namespace VoxFox.Services
                 lesson.Content = updateLessonDto.Content ?? lesson.Content;
 
                 var updatedLesson = await _lessonRepository.UpdateAsync(lesson);
-                if (updatedLesson == null)
-                {
-                    return ServiceResult<LessonDto>.Fail(
-                        "Не удалось обновить урок",
-                        StatusCodes.Status500InternalServerError
-                    );
-                }
 
                 return ServiceResult<LessonDto>.Ok(MapToDo(updatedLesson), "Урок успешно обновлен");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<LessonDto>.Fail(
                     $"Ошибка при обновлении урока: {ex.Message}",
@@ -147,7 +131,7 @@ namespace VoxFox.Services
                 Id = lesson.Id,
                 Title = lesson.Title,
                 Description = lesson.Description,
-                Content = lesson.Content
+                Content = lesson.Content!
             };
         }
     }

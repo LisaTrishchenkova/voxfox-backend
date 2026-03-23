@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using VoxFox.Models.DTOs;
-using VoxFox.Models.Entities;
+
+namespace VoxFox.Models.DTOs;
+
 public class CreateCourseDto
 {
     [Required]

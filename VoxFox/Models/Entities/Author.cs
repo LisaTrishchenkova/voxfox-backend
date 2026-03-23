@@ -2,8 +2,9 @@ namespace VoxFox.Models.Entities
 {
     public class Author
     {
-        public Guid Id { get; set; }
+        public Guid Id { get; init; }
         public string Name { get; set; } = null!;
-         public ICollection<Course> Courses { get; set; }
+        // ReSharper disable once PropertyCanBeMadeInitOnly.Global
+        public ICollection<Course>? Courses { get; set; }
     }
 }

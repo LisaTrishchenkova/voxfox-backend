@@ -1,6 +1,6 @@
 using VoxFox.Models.DTOs;
 
-namespace VoxFox.Interfaces.Section
+namespace VoxFox.Interfaces.Lesson
 {
     public interface ILessonService
     {

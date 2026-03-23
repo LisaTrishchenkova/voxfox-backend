@@ -37,10 +37,10 @@ namespace VoxFox.Controllers
 
                 return CreatedAtAction(
                     nameof(GetSectionById),
-                    new { id = result.Data.Id },
+                    new { id = result.Data!.Id },
                     result.Data);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 var message = ex.Message;
                 return StatusCode(500, message);
@@ -65,7 +65,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -93,7 +93,7 @@ namespace VoxFox.Controllers
 
                 return NoContent();
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
