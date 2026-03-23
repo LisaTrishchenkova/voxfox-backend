@@ -34,8 +34,8 @@ namespace VoxFox.Controllers
         public async Task<ActionResult<AuthorDto>> CreateAuthor(CreateAuthorDto createAuthorDto)
         {
             var existingAuthor = await _context.Authors
-                .AnyAsync(c => c.Name.ToLower() == createAuthorDto.Name.ToLower());
-
+                .AnyAsync(c => string.Equals(c.Name, createAuthorDto.Name, StringComparison.OrdinalIgnoreCase));
+            
             if (existingAuthor)
             {
                 return BadRequest($"Автор с именем '{createAuthorDto.Name}' уже существует");
@@ -69,7 +69,7 @@ namespace VoxFox.Controllers
             }
 
             var existingAuthor = await _context.Categories
-                .AnyAsync(c => c.Name.ToLower() == updateAuthorDto.Name.ToLower() && c.Id != id);
+                .AnyAsync(c => string.Equals(c.Name, updateAuthorDto.Name, StringComparison.OrdinalIgnoreCase) && c.Id != id);
 
             if (existingAuthor)
             {

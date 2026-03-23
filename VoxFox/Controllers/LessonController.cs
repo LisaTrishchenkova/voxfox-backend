@@ -1,23 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.VisualBasic;
 using System.ComponentModel.DataAnnotations;
-using VoxFox.Interfaces.Section;
+using VoxFox.Interfaces.Lesson;
 using VoxFox.Models.DTOs;
 
 namespace VoxFox.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class LessonController : ControllerBase
+    public class LessonController(ILessonService lessonService) : ControllerBase
     {
-        //TODO: Зарегистрировать не забыть в Program.cs
-        private readonly ILessonService _lessonService;
-
-        public LessonController(ILessonService lessonService)
-        {
-            _lessonService = lessonService;
-        }
-
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(LessonDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -30,7 +21,7 @@ namespace VoxFox.Controllers
         {
             try
             {
-                var result = await _lessonService.CreateLessonAsync(sectionId, createLesson);
+                var result = await lessonService.CreateLessonAsync(sectionId, createLesson);
 
                 if (!result.Success)
                 {
@@ -39,10 +30,10 @@ namespace VoxFox.Controllers
 
                 return CreatedAtAction(
                     nameof(GetLessonById),
-                    new { id = result.Data.Id },
+                    new { id = result.Data!.Id },
                     result.Data);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 var message = ex.Message;
                 return StatusCode(500, message);
@@ -59,7 +50,7 @@ namespace VoxFox.Controllers
         {
             try
             {
-                var result = await _lessonService.GetLessonByIdAsync(id);
+                var result = await lessonService.GetLessonByIdAsync(id);
                 if (!result.Success)
                 {
                     return StatusCode(result.StatusCode ?? 404, result.Message);
@@ -67,7 +58,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -83,7 +74,7 @@ namespace VoxFox.Controllers
         {
             try
             {
-                var result = await _lessonService.DeleteLessonAsync(id);
+                var result = await lessonService.DeleteLessonAsync(id);
                 if (!result.Success)
                     return StatusCode(result.StatusCode ?? 400, result.Message);
 
@@ -108,7 +99,7 @@ namespace VoxFox.Controllers
         {
             try
             {
-                var result = await _lessonService.UpdateLessonAsync(id, updateLesson);
+                var result = await lessonService.UpdateLessonAsync(id, updateLesson);
 
                 if (!result.Success)
                 {

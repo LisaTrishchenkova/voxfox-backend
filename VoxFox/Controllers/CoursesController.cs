@@ -1,7 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using VoxFox.Enums;
+using VoxFox.Interfaces.Course;
 using VoxFox.Models.DTOs;
+using VoxFox.Models.Requests;
+using VoxFox.Models.Responses;
 
 namespace VoxFox.Controllers
 {
@@ -92,9 +95,8 @@ namespace VoxFox.Controllers
                 var course = await _courseService.CreateCourseAsync(createCourseDto);
                 return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, course);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                var message = ex.Message;
                 return StatusCode(500, ex.StackTrace);
             }
         }
@@ -114,7 +116,7 @@ namespace VoxFox.Controllers
 
                 return Ok(course);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -143,8 +145,6 @@ namespace VoxFox.Controllers
         )
         {
             var courseUpdated = await _courseService.UpdateCourseAsync(id, updateCourseDto);
-            if (courseUpdated == null)
-                return NotFound($"Не удалось обновить курс по id: {id}");
 
             return Ok(courseUpdated);
         }

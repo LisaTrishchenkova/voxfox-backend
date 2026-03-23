@@ -1,19 +1,19 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace VoxFox.Models.Requests
+namespace VoxFox.Models.Requests.AuthRequest
 {
-    public class RegistrationRequest()
+    public class RegistrationRequest
     {
         [Required]
         [MinLength(2)]
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public required string Email { get; set; }
 
         [Required]
         [MinLength(8)]
-        public string Password { get; set; }
+        public required string Password { get; set; }
     }
 }

@@ -2,7 +2,7 @@ using VoxFox.Interfaces.Section;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
-namespace VoxFox.Services
+namespace VoxFox.Services.Course
 {
     public class SectionService : ISectionService
     {
@@ -34,17 +34,10 @@ namespace VoxFox.Services
                 };
 
                 var createSection = await _sectionRepository.AddAsync(section);
-                if (createSection == null)
-                {
-                    return ServiceResult<SectionDto>.Fail(
-                        $"Не удалось создать раздел",
-                        StatusCodes.Status404NotFound
-                    );
-                }
 
                 return ServiceResult<SectionDto>.Created(MapToDo(createSection));
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<SectionDto>.Fail(
                     $"Ошибка при создании раздела: {ex.Message}",
@@ -67,7 +60,7 @@ namespace VoxFox.Services
 
                 return ServiceResult<bool>.Ok(true, "Раздел успешно удален");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<bool>.Fail(
                      $"Ошибка при удалении раздела: {ex.Message}",
@@ -99,13 +92,13 @@ namespace VoxFox.Services
                     );
                 }
 
-                var sectionDTO = sections
+                var sectionDto = sections
                     .Select(MapToDo)
                     .ToList();
 
-                return ServiceResult<IReadOnlyCollection<SectionDto>>.Ok(sectionDTO);
+                return ServiceResult<IReadOnlyCollection<SectionDto>>.Ok(sectionDto);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<IReadOnlyCollection<SectionDto>>.Fail(
                     $"Ошибка при получении списка разделов: {ex.Message}",
@@ -132,7 +125,7 @@ namespace VoxFox.Services
                 var lessonsDto = lessons.Select(MapToDo).ToList();
                 return ServiceResult<IList<LessonDto>>.Ok(lessonsDto);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<IList<LessonDto>>.Fail(
                     $"Ошибка при получении уроков раздела: {ex.Message}",
@@ -157,7 +150,7 @@ namespace VoxFox.Services
 
                 return ServiceResult<SectionDto?>.Ok(MapToDo(section));
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<SectionDto?>.Fail(
                     $"Ошибка при получении раздела: {ex.Message}",
@@ -183,17 +176,10 @@ namespace VoxFox.Services
                 section.Description = updateSectionDto.Description ?? section.Description;
 
                 var updatedSection = await _sectionRepository.UpdateAsync(section);
-                if (updatedSection == null)
-                {
-                    return ServiceResult<SectionDto>.Fail(
-                        "Не удалось обновить раздел",
-                        StatusCodes.Status500InternalServerError
-                    );
-                }
 
                 return ServiceResult<SectionDto>.Ok(MapToDo(updatedSection), "Раздел успешно обновлен");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 return ServiceResult<SectionDto>.Fail(
                     $"Ошибка при обновлении раздела: {ex.Message}",
@@ -218,7 +204,7 @@ namespace VoxFox.Services
                 Id = lesson.Id,
                 Title = lesson.Title,
                 Description = lesson.Description,
-                Content = lesson.Content
+                Content = lesson.Content!
             };
         }
     }
