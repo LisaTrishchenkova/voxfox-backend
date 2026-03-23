@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace VoxFox.Models.Requests
+namespace VoxFox.Models.Requests.AuthRequest
 {
-    public class LoginRequest()
+    public class LoginRequest
     {
         /// <summary>
         /// Email используемый для входа
@@ -10,7 +10,7 @@ namespace VoxFox.Models.Requests
         /// <value></value>
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public required string Email { get; set; }
 
         /// <summary>
         /// Пароль используемый для входа
@@ -18,7 +18,7 @@ namespace VoxFox.Models.Requests
         /// <value></value>
         [Required]
         [MinLength(8)]
-        public string Password { get; set; }
+        public required string Password { get; set; }
 
     }
 

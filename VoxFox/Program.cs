@@ -11,10 +11,13 @@ using VoxFox.Repositories;
 using VoxFox.Interfaces.Section;
 using Microsoft.OpenApi;
 using Prometheus;
+using VoxFox.Interfaces.Course;
+using VoxFox.Interfaces.Lesson;
+using VoxFox.Services.Course;
 
 namespace VoxFox
 {
-    public class Program
+    public abstract class Program
     {
         public static void Main(string[] args)
         {
@@ -244,7 +247,7 @@ namespace VoxFox
                             ),
 
                         // Информация о всех зарегистрированных endpoint'ах
-                        Endpoints = app.Services.GetService<Microsoft.AspNetCore.Routing.EndpointDataSource>()?.Endpoints
+                        Endpoints = app.Services.GetService<EndpointDataSource>()?.Endpoints
                             .Select(e => e.DisplayName)
                             .Where(name => !string.IsNullOrEmpty(name))
                             .ToList() ?? new List<string?>(),

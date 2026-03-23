@@ -1,7 +1,7 @@
-namespace VoxFox.Models.Requests
+namespace VoxFox.Models.Requests.AuthRequest
 {
     public class RefreshRequest
     {
-         public string TokenRefresh { get; set; }
+         public string? TokenRefresh { get; set; }
     }
 }

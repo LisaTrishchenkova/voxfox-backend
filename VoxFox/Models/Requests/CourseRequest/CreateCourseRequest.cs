@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace VoxFox.Models.Requests
+namespace VoxFox.Models.Requests.CourseRequest
 {
-    public class CreateCourseRequest()
+    public class CreateCourseRequest
     {
         [Required]
         [MaxLength(200, ErrorMessage = "Название не должно превышать 200 символов")]

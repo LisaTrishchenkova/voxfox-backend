@@ -1,7 +1,9 @@
-using System.Runtime.InteropServices.Marshalling;
 using Microsoft.EntityFrameworkCore;
+using VoxFox.Interfaces.Course;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
+
+namespace VoxFox.Repositories;
 
 public class CourseRepository : ICourseRepository
 {
@@ -22,8 +24,8 @@ public class CourseRepository : ICourseRepository
             await _context.SaveChangesAsync();
 
             await _context.Entry(course)
-              .Reference(c => c.Author)  // Reference - для одиночной связи
-              .LoadAsync();
+                .Reference(c => c.Author)  // Reference - для одиночной связи
+                .LoadAsync();
 
             return course;
         }
@@ -129,44 +131,44 @@ public class CourseRepository : ICourseRepository
     public IQueryable<Course> GetCoursesQuery()
     {
         return _context.Courses
-             // .Include(c => c.Category)
-             .AsNoTracking()
-             .AsQueryable();
+            // .Include(c => c.Category)
+            .AsNoTracking()
+            .AsQueryable();
     }
 
     public IQueryable<Course> GetPublishedCoursesQuery()
     {
         return _context.Courses
-             .Where(c => c.Status == VoxFox.Enums.CourseStatus.Published)
-             .AsNoTracking()
-             .Include(c => c.Author)
-             .AsQueryable();
+            .Where(c => c.Status == Enums.CourseStatus.Published)
+            .AsNoTracking()
+            .Include(c => c.Author)
+            .AsQueryable();
     }
     public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
     {
         return await query
-               .Skip(skip)
-               .Take(take)
-               .Select(c => new CourseDto
-               {
-                   Id = c.Id,
-                   Title = c.Title,
-                   Description = c.Description,
-                   Status = c.Status,
-                   Tags = c.Tags != null ? c.Tags.Select(t => new TagDto
-                   {
-                       Name = t.Name
-                   }).ToList() : new List<TagDto>(),
-                   // Price = c.Price,
-                   CategoryId = c.CategoryId,
-                   Author = new AuthorDto
-                  {
-                   Id = c.Author.Id,
-                   Name = c.Author.Name
-                    },
-                   PublishedAt = c.PublishedAt
-               })
-               .ToListAsync();
+            .Skip(skip)
+            .Take(take)
+            .Select(c => new CourseDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Description = c.Description,
+                Status = c.Status,
+                Tags = c.Tags != null ? c.Tags.Select(t => new TagDto
+                {
+                    Name = t.Name
+                }).ToList() : new List<TagDto>(),
+                // Price = c.Price,
+                CategoryId = c.CategoryId,
+                Author = new AuthorDto
+                {
+                    Id = c.Author!.Id,
+                    Name = c.Author.Name
+                },
+                PublishedAt = c.PublishedAt
+            })
+            .ToListAsync();
     }
 
     public async Task<int> GetTotalCountAsync(IQueryable<Course> query)

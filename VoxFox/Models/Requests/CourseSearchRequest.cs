@@ -1,4 +1,7 @@
 using VoxFox.Enums;
+
+namespace VoxFox.Models.Requests;
+
 public class CourseSearchRequest
 {
     public string? SearchTerm { get; set; }

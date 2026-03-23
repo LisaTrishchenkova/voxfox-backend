@@ -1,7 +1,11 @@
+using VoxFox.Enums;
+using VoxFox.Interfaces.Course;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
-using VoxFox;
-using VoxFox.Enums;
+using VoxFox.Models.Requests;
+using VoxFox.Models.Responses;
+
+namespace VoxFox.Services.Course;
 
 public class CourseService : ICourseService
 {
@@ -16,7 +20,7 @@ public class CourseService : ICourseService
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto)
     {
-        var course = new Course
+        var course = new Models.Entities.Course
         {
             Status = CourseStatus.Draft,
             Title = createCourseDto.Title,
@@ -54,11 +58,11 @@ public class CourseService : ICourseService
         if (courses == null)
             throw new Exception("Не удалось получить список курсов");
 
-        var coursesDTO = courses
+        var coursesDto = courses
             .Select(MapToDo)
             .ToList();
 
-        return coursesDTO;
+        return coursesDto;
     }
 
     public async Task<CourseDto?> GetCourseByIdAsync(Guid id)
@@ -67,9 +71,9 @@ public class CourseService : ICourseService
         if (course == null)
             return null;
 
-        var courseDTO = MapToDo(course);
+        var courseDto = MapToDo(course);
 
-        return courseDTO;
+        return courseDto;
     }
 
     public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto)
@@ -78,7 +82,7 @@ public class CourseService : ICourseService
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
         {
-           return ServiceResult<CourseDto>.Fail(
+            return ServiceResult<CourseDto>.Fail(
                 $"Курс с id: {id} не найден",
                 StatusCodes.Status404NotFound
             );
@@ -88,7 +92,7 @@ public class CourseService : ICourseService
         course.Description = updateCourseDto.Description ?? course.Description;
 
         // Обновляем теги
-        if (updateCourseDto.Tags != null && course.Tags != null)
+        if (course.Tags != null)
         {
             // Удаляем старые теги, которых нет в новом списке
             var existingTags = course.Tags.ToList();
@@ -123,7 +127,7 @@ public class CourseService : ICourseService
 
         var updateCourse = await _courseRepository.UpdateAsync(course);
         
-       return ServiceResult<CourseDto>.Ok(MapToDo(updateCourse));
+        return ServiceResult<CourseDto>.Ok(MapToDo(updateCourse));
         
     }
 
@@ -145,7 +149,7 @@ public class CourseService : ICourseService
             var sectionsDto = sections.Select(MapToDo).ToList();
             return ServiceResult<IList<SectionDto>>.Ok(sectionsDto);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             return ServiceResult<IList<SectionDto>>.Fail(
                 $"Ошибка при получении разделов курса: {ex.Message}",
@@ -154,7 +158,7 @@ public class CourseService : ICourseService
         }
     }
 
-    private CourseDto MapToDo(Course course)
+    private CourseDto MapToDo(Models.Entities.Course course)
     {
         var courses = new CourseDto
         {
@@ -167,12 +171,12 @@ public class CourseService : ICourseService
             {
                 Name = t.Name
             }).ToList(),
-             Author = new AuthorDto 
+            Author = new AuthorDto 
             {
-            Id = course.Author.Id,
-            Name = course.Author.Name
+                Id = course.Author!.Id,
+                Name = course.Author.Name
             },
-             PublishedAt = course.PublishedAt
+            PublishedAt = course.PublishedAt
         };
 
         return courses;
@@ -237,7 +241,7 @@ public class CourseService : ICourseService
         }
     }
 
-    private IQueryable<Course> ApplySearchPriority(IQueryable<Course> query, string searchTerm)
+    private IQueryable<Models.Entities.Course> ApplySearchPriority(IQueryable<Models.Entities.Course> query, string searchTerm)
     {
         var searchTermLower = searchTerm.ToLower();
 
@@ -261,7 +265,7 @@ public class CourseService : ICourseService
             .Union(titleContainsMatches)
             .Union(descriptionContainsMatches);
     }
-    private IQueryable<Course> ApplySorting(IQueryable<Course> query, CoursesSortBy sortBy, string? searchTerm)
+    private IQueryable<Models.Entities.Course> ApplySorting(IQueryable<Models.Entities.Course> query, CoursesSortBy sortBy, string? searchTerm)
     {
         return sortBy switch
         {
@@ -274,7 +278,7 @@ public class CourseService : ICourseService
         };
     }
 
-    private IQueryable<Course> ApplyRelevanceSorting(IQueryable<Course> query, string? searchTerm)
+    private IQueryable<Models.Entities.Course> ApplyRelevanceSorting(IQueryable<Models.Entities.Course> query, string? searchTerm)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
             return query.OrderBy(c => c.Title);
@@ -303,8 +307,7 @@ public class CourseService : ICourseService
         if (course.Status == CourseStatus.Published)
         {
             return ServiceResult<bool>.Fail(
-                $"Курс с id: {id} уже опубликован",
-                StatusCodes.Status400BadRequest
+                $"Курс с id: {id} уже опубликован"
             );
         }
 
@@ -312,8 +315,7 @@ public class CourseService : ICourseService
             string.IsNullOrWhiteSpace(course.Description))
         {
             return ServiceResult<bool>.Fail(
-                "Курс должен иметь название и описание перед публикацией",
-                StatusCodes.Status400BadRequest
+                "Курс должен иметь название и описание перед публикацией"
             );
         }
 

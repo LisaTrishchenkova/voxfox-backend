@@ -1,4 +1,4 @@
-namespace VoxFox.Models.Responses
+namespace VoxFox.Models.Responses.CourceResponse
 {
     public class CourseResponse
     {
