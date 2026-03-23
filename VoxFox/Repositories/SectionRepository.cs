@@ -1,6 +1,5 @@
-using System.Collections;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using VoxFox.Interfaces.Section;
 using VoxFox.Models.Entities;
 
 namespace VoxFox.Repositories

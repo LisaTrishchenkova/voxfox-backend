@@ -4,11 +4,11 @@ namespace VoxFox
     public class ServiceResult<T>
     {
         public bool Success { get; set; }
-        public string Message { get; set; }
-        public T Data { get; set; }
+        public string? Message { get; set; }
+        public T? Data { get; set; }
         public int? StatusCode { get; set; }
 
-        public static ServiceResult<T> Ok(T data, string message = null)
+        public static ServiceResult<T> Ok(T data, string? message = null)
         {
             return new ServiceResult<T>
             {

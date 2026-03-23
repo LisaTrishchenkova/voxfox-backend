@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Models.Entities;
-using VoxFox.Models.Responses;
+using VoxFox.Models.Responses.UserResponse;
 
 namespace VoxFox.Controllers
 {

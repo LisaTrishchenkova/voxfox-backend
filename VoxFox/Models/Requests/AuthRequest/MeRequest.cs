@@ -1,4 +1,4 @@
-namespace VoxFox.Models.Requests
+namespace VoxFox.Models.Requests.AuthRequest
 {
     public class Me
     {

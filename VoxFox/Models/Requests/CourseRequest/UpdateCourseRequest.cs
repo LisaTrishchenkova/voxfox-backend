@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace VoxFox.Models.Requests
+namespace VoxFox.Models.Requests.CourseRequest
 {
-    public class UpdateCourseRequest()
+    public class UpdateCourseRequest
     {
         [MaxLength(200)]
         public string? Title { get; set; }

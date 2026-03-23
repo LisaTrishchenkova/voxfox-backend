@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
 using VoxFox.Services;
 using VoxFox.Models.Entities;
@@ -10,10 +11,13 @@ using VoxFox.Repositories;
 using VoxFox.Interfaces.Section;
 using Microsoft.OpenApi;
 using Prometheus;
+using VoxFox.Interfaces.Course;
+using VoxFox.Interfaces.Lesson;
+using VoxFox.Services.Course;
 
 namespace VoxFox
 {
-    public class Program
+    public abstract class Program
     {
         public static void Main(string[] args)
         {
@@ -96,6 +100,8 @@ namespace VoxFox
 
             ConfigureDatabase(builder);
 
+            builder.Services.AddMetrics();
+
             builder.Services.AddScoped<ICourseRepository, CourseRepository>();
             builder.Services.AddScoped<ICourseService, CourseService>();
             builder.Services.AddScoped<ISectionRepository, SectionRepository>();
@@ -106,14 +112,17 @@ namespace VoxFox
 
             app.UseCors("AllowFrontend");
             app.UseRouting();
-
+            app.UseHttpMetrics(options =>
+            {
+                options.ReduceStatusCodeCardinality();
+            });
             app.MapGet("/version", () => new
             {
                 Version = Environment.GetEnvironmentVariable("APP_VERSION"),
                 Environment = app.Environment.EnvironmentName
-            });
+            }).DisableHttpMetrics();
 
-            app.MapGet("/healthz", () => Results.Ok(new { status = "alive" }));
+            app.MapGet("/healthz", () => Results.Ok(new { status = "alive" })).DisableHttpMetrics();
 
             app.MapGet("/health", () => new
             {
@@ -121,10 +130,22 @@ namespace VoxFox
                 Version = Environment.GetEnvironmentVariable("APP_VERSION"),
                 // Database = CheckDatabase() ? "connected" : "disconnected",
                 Timestamp = DateTime.UtcNow
-            });
+            }).DisableHttpMetrics();
 
             if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Staging"))
             {
+                app.Use(async (context, next) =>
+                {
+                    var path = context.Request.Path.Value ?? "";
+                    if (path.StartsWith("/swagger") || path.StartsWith("/api-docs"))
+                    {
+                        var metricsFeature = context.Features.Get<IHttpMetricsTagsFeature>();
+                        if (metricsFeature != null)
+                            metricsFeature.MetricsDisabled = true;
+                    }
+                    await next();
+                });
+                
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
@@ -226,7 +247,7 @@ namespace VoxFox
                             ),
 
                         // Информация о всех зарегистрированных endpoint'ах
-                        Endpoints = app.Services.GetService<Microsoft.AspNetCore.Routing.EndpointDataSource>()?.Endpoints
+                        Endpoints = app.Services.GetService<EndpointDataSource>()?.Endpoints
                             .Select(e => e.DisplayName)
                             .Where(name => !string.IsNullOrEmpty(name))
                             .ToList() ?? new List<string?>(),
@@ -237,7 +258,7 @@ namespace VoxFox
 
                         Timestamp = DateTime.UtcNow
                     };
-                })
+                }).DisableHttpMetrics()
                 .WithName("Debug")
                 .WithDisplayName("Debug endpoint with CORS info");
             }
@@ -246,16 +267,16 @@ namespace VoxFox
             // app.UseAuthentication();
             // app.UseAuthorization();
 
-            app.UseHttpMetrics();
-            
+
+
             app.MapControllers();
-            
-            app.MapMetrics("/metrics").RequireHost("*:9090");
-            
+
+            app.MapMetrics().RequireHost("*:9090");
+
             app.Urls.Add("http://+:9090");
-            
+
             app.Urls.Add("http://+:8080");
-            
+
             app.Run();
         }
 

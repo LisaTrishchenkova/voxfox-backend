@@ -1,12 +1,9 @@
-using System.ComponentModel;
-using System.Linq;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using VoxFox.Interfaces;
 using VoxFox.Models.Entities;
-using VoxFox.Models.Requests;
-using VoxFox.Models.Responses;
+using VoxFox.Models.Requests.AuthRequest;
+using VoxFox.Models.Responses.AuthResponse;
 
 namespace VoxFox.Controllers
 {
@@ -58,7 +55,7 @@ namespace VoxFox.Controllers
             [FromBody] RegistrationRequest request
         )
         {
-            _applicationContext.Users.Add(new Models.Entities.User
+            _applicationContext.Users.Add(new User
             {
                 Name = request.Name,
                 Email = request.Email,

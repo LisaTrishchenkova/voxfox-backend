@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
-namespace VoxFox.Models.Requests
+
+namespace VoxFox.Models.Requests.CoursTestRequest
 {
     public class UpdateCourseTestRequest
     {
