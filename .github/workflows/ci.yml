@@ -7,23 +7,24 @@ on:
     branches: [dev, staging, master]
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
 
 concurrency:
-  group: ${{github.workflow}}-${{github.ref}}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: "8.0.x"
   CONFIGURATION: "Release"
+  COVERAGE_THRESHOLD: 80
 
 jobs:
-  test:
-    timeout-minutes: 15
+  # Job 1: Быстрая проверка кода (линтинг, уязвимости)
+  lint:
+    timeout-minutes: 10
     runs-on: ubuntu-24.04
-
     steps:
       - uses: actions/checkout@v6
 
@@ -43,21 +44,54 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build & Analyze (Roslynator)
-        continue-on-error: true
-        run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }}
-      # run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }} /warnaserror
-
       - name: Run linter (dotnet format)
         run: |
           dotnet tool install -g dotnet-format || true
           dotnet format --verify-no-changes --severity warn || echo "⚠️ Linting issues found"
 
-      - name: Test
+      - name: Check for vulnerable packages
+        run: |
+          echo "## 📦 Package Security Scan" >> $GITHUB_STEP_SUMMARY
+          echo "### Vulnerable packages:" >> $GITHUB_STEP_SUMMARY
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "⚠️ No vulnerable packages found"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deprecated packages:" >> $GITHUB_STEP_SUMMARY
+          dotnet list package --deprecated --include-transitive 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "⚠️ No deprecated packages found"
+
+  # Job 2: Сборка и тесты
+  build-and-test:
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }} # --warnaserror
+
+      - name: Run tests with coverage
         run: |
           dotnet test --no-build --configuration ${{ env.CONFIGURATION }} \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults
+            --results-directory ./TestResults \
+            --settings coverlet.runsettings \
+            --logger "trx"
 
       - name: Upload coverage reports
         if: always()
@@ -67,40 +101,94 @@ jobs:
           path: ./TestResults
           retention-days: 30
 
-      - name: Publish
-        run: dotnet publish VoxFox/VoxFox.csproj -c ${{ env.CONFIGURATION }} -o ./publish
+      - name: Check coverage threshold
+        if: always()
+        run: |
+          dotnet tool install -g dotnet-coverage
+          dotnet-coverage merge ./TestResults/**/*.coverage -o merged.coverage
+          COVERAGE=$(dotnet-coverage report merged.coverage --format text | grep "Total" | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
+
+          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "⚠️ Coverage is below ${{ env.COVERAGE_THRESHOLD }}%"
+            echo "coverage_status=warning" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Coverage meets threshold"
+            echo "coverage_status=passed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish artifact
+        run: dotnet publish WebAPI/WebAPI.csproj -c ${{ env.CONFIGURATION }} -o ./publish
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: build-${{github.sha}}
+          name: build-${{ github.sha }}
           path: ./publish
           retention-days: 30
 
-      - name: Check for vulnerable packages
-        run: |
-          dotnet list package --vulnerable --include-transitive || echo "⚠️ Check packages for vulnerabilities"
-          dotnet list package --deprecated || echo "⚠️ Check for deprecated packages"
-
-      - name: Comment PR
+  # Job 3: Комментарий в PR
+  comment:
+    runs-on: ubuntu-24.04
+    needs: [lint, build-and-test]
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Comment PR on success
+        if: needs.build-and-test.result == 'success' && needs.lint.result == 'success'
         uses: actions/github-script@v8
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          script: |
+            const coverage = '${{ needs.build-and-test.outputs.coverage }}';
+            const coverageStatus = coverage ? `📊 Code coverage: ${coverage}%` : '📊 Coverage data not available';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ **CI passed successfully!**\n\n` +
+                    `| Check | Status |\n` +
+                    `|-------|--------|\n` +
+                    `| Linting | ✅ Passed |\n` +
+                    `| Build | ✅ Passed |\n` +
+                    `| Tests | ✅ Passed |\n` +
+                    `| ${coverageStatus} | ✅ |\n\n` +
+                    `📦 **Build artifact:** \`build-${{ github.sha }}\`\n` +
+                    `🔍 **Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n` +
+                    `✨ *Ready for review!*`
+            })
+
+      - name: Comment PR on failure
+        if: needs.build-and-test.result == 'failure' || needs.lint.result == 'failure'
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ❌ **CI failed**
+
+            | Check | Status |
+            |-------|--------|
+            | Linting | ${{ needs.lint.result == 'success' && '✅' || '❌' }} |
+            | Build & Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} |
+
+            🔍 **Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Please check the logs and fix the issues.
+
+  # Job 4: Уведомление о низком покрытии кода (опционально)
+  coverage-warning:
+    runs-on: ubuntu-24.04
+    needs: [build-and-test]
+    if: always() && github.event_name == 'pull_request' && needs.build-and-test.outputs.coverage_status == 'warning'
+    steps:
+      - name: Comment coverage warning
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ **ASP.NET Core CI passed on .NET ${{ env.DOTNET_VERSION }}!**\n\n` +
-                    `- Build artifact: \`build-${{ github.sha }}\`\n` +
-                    `- See details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+              body: `⚠️ **Coverage Warning**\n\n` +
+                    `Code coverage is **${{ needs.build-and-test.outputs.coverage }}%**, which is below the threshold of **${{ env.COVERAGE_THRESHOLD }}%**.\n\n` +
+                    `Please consider adding more tests to improve coverage.`
             })
-
-      - name: Notify on failure
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions-cool/maintain-one-comment@v3
-        with:
-          body: |
-            ❌ **ASP.NET Core CI failed on ${{ github.ref_name }}**
-            - .NET Version: ${{ env.DOTNET_VERSION }}
-            - See: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
