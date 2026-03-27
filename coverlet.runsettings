@@ -6,7 +6,7 @@
         <Configuration>
           <Format>cobertura,json,lcov</Format>
           <Exclude>[xunit.*]*,[*.Tests]*,[*.Test]*,[Microsoft.*]*,[System.*]*</Exclude>
-          <Include>[WebAPI*]*</Include>
+          <Include>[VoxFox*]*</Include>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
         </Configuration>
       </DataCollector>
