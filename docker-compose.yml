@@ -26,9 +26,9 @@
       - "-c"
       - "shared_preload_libraries=uuid-ossp"
     ports:
-      - "5432:5432"
+      - "5436:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - voxfox_postgres_data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+  voxfox_postgres_data:

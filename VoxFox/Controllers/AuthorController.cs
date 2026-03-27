@@ -1,107 +1,97 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
-namespace VoxFox.Controllers
+namespace VoxFox.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthorController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthorController : ControllerBase
-    {
-        private readonly ApplicationContext _context;
+	private readonly ApplicationContext _context;
 
-        public AuthorController(ApplicationContext context)
-        {
-            _context = context;
-        }
+	public AuthorController(ApplicationContext context)
+	{
+		_context = context;
+	}
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<AuthorDto>>> GetAllAuthors()
-        {
-            var authors = await _context.Authors
-                .Select(c => new AuthorDto
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                })
-                .ToListAsync();
+	[HttpGet]
+	public async Task<ActionResult<IEnumerable<AuthorDto>>> GetAllAuthors()
+	{
+		var authors = await _context.Authors
+			.Select(c => new AuthorDto
+			{
+				Id = c.Id,
+				Name = c.Name
+			})
+			.ToListAsync();
 
-            return Ok(authors);
-        }
+		return Ok(authors);
+	}
 
-        [HttpPost]
-        public async Task<ActionResult<AuthorDto>> CreateAuthor(CreateAuthorDto createAuthorDto)
-        {
-            var existingAuthor = await _context.Authors
-                .AnyAsync(c => string.Equals(c.Name, createAuthorDto.Name, StringComparison.OrdinalIgnoreCase));
-            
-            if (existingAuthor)
-            {
-                return BadRequest($"Автор с именем '{createAuthorDto.Name}' уже существует");
-            }
+	[Authorize]
+	[HttpPost]
+	public async Task<ActionResult<AuthorDto>> CreateAuthor(CreateAuthorDto createAuthorDto)
+	{
+		var existingAuthor = await _context.Authors
+			.AnyAsync(c => EF.Functions.ILike(c.Name, createAuthorDto.Name));
 
-            var author = new Author
-            {
-                Name = createAuthorDto.Name
-            };
+		if (existingAuthor) return BadRequest($"Автор с именем '{createAuthorDto.Name}' уже существует");
 
-            _context.Authors.Add(author);
-            await _context.SaveChangesAsync();
+		var author = new Author
+		{
+			Name = createAuthorDto.Name
+		};
 
-            var authorDto = new AuthorDto
-            {
-                Id = author.Id,
-                Name = author.Name
-            };
+		_context.Authors.Add(author);
+		await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetAllAuthors), new { id = author.Id }, authorDto);
-        }
+		var authorDto = new AuthorDto
+		{
+			Id = author.Id,
+			Name = author.Name
+		};
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult<AuthorDto>> UpdateAuthor(Guid id, CreateAuthorDto updateAuthorDto)
-        {
-            var author = await _context.Authors.FindAsync(id);
-            
-            if (author == null)
-            {
-                return NotFound($"Автор с ID {id} не найдена");
-            }
+		return CreatedAtAction(nameof(GetAllAuthors), new { id = author.Id }, authorDto);
+	}
 
-            var existingAuthor = await _context.Categories
-                .AnyAsync(c => string.Equals(c.Name, updateAuthorDto.Name, StringComparison.OrdinalIgnoreCase) && c.Id != id);
+	[HttpPut("{id}")]
+	public async Task<ActionResult<AuthorDto>> UpdateAuthor(Guid id, CreateAuthorDto updateAuthorDto)
+	{
+		var author = await _context.Authors.FindAsync(id);
 
-            if (existingAuthor)
-            {
-                return BadRequest($"Автор с именем '{updateAuthorDto.Name}' уже существует");
-            }
+		if (author == null) return NotFound($"Автор с ID {id} не найдена");
 
-            author.Name = updateAuthorDto.Name;
-            await _context.SaveChangesAsync();
+		var existingAuthor = await _context.Categories
+			.AnyAsync(c =>
+				string.Equals(c.Name, updateAuthorDto.Name, StringComparison.OrdinalIgnoreCase) && c.Id != id);
 
-            var authorDto = new AuthorDto
-            {
-                Id = author.Id,
-                Name = author.Name
-            };
+		if (existingAuthor) return BadRequest($"Автор с именем '{updateAuthorDto.Name}' уже существует");
 
-            return Ok(authorDto);
-        }
+		author.Name = updateAuthorDto.Name;
+		await _context.SaveChangesAsync();
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAuthor(Guid id)
-        {
-            var author = await _context.Authors.FindAsync(id);
-            
-            if (author == null)
-            {
-                return NotFound($"Автор с ID {id} не найдена");
-            }
+		var authorDto = new AuthorDto
+		{
+			Id = author.Id,
+			Name = author.Name
+		};
 
-            _context.Authors.Remove(author);
-            await _context.SaveChangesAsync();
+		return Ok(authorDto);
+	}
 
-            return NoContent();
-        }
-    }
+	[HttpDelete("{id}")]
+	public async Task<IActionResult> DeleteAuthor(Guid id)
+	{
+		var author = await _context.Authors.FindAsync(id);
+
+		if (author == null) return NotFound($"Автор с ID {id} не найдена");
+
+		_context.Authors.Remove(author);
+		await _context.SaveChangesAsync();
+
+		return NoContent();
+	}
 }
