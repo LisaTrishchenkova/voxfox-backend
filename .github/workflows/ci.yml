@@ -119,7 +119,7 @@ jobs:
           fi
 
       - name: Publish artifact
-        run: dotnet publish WebAPI/WebAPI.csproj -c ${{ env.CONFIGURATION }} -o ./publish
+        run: dotnet publish VoxFox/VoxFox.csproj -c ${{ env.CONFIGURATION }} -o ./publish
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
