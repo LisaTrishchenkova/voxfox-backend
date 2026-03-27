@@ -1,0 +1,18 @@
+# Корневой файл
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_style = tab
+indent_size = 4
+
+[**/Migrations/*.cs]
+indent_style = space
+indent_size = 4
+generated_code = true
+dotnet_analyzer_diagnostic.category-Style.severity = none

@@ -83,12 +83,10 @@ jobs:
             --build-arg GIT_COMMIT=${{ steps.version.outputs.short_sha }} \
             --build-arg BUILD_DATE=${{ steps.version.outputs.build_date }} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
             --load \
             -f Dockerfile .
 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
           docker buildx rm builder
 
