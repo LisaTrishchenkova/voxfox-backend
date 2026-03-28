@@ -9,6 +9,9 @@ public sealed class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
+		var httpPort = builder.Configuration["Ports:Http"] ?? "8080";
+		var metricsPort = builder.Configuration["Ports:Metrics"] ?? "9090";
+
 		// ── Services ─────────────────────────────────────────────────────────
 		builder.Services
 			.AddCorsPolicy(builder.Configuration)
@@ -33,9 +36,8 @@ public sealed class Program
 		// ── Endpoints ─────────────────────────────────────────────────────────
 		app.MapSystemEndpoints();
 		app.MapControllers();
-		app.MapMetrics().RequireHost("*:9090");
+		app.MapMetrics().RequireHost($"*:{metricsPort}");
 
-		// Swagger + Debug только в не-prod окружениях
 		if (!app.Environment.IsProduction())
 		{
 			app.UseSwaggerWithUi();
@@ -43,8 +45,8 @@ public sealed class Program
 		}
 
 		// ── Ports ─────────────────────────────────────────────────────────────
-		app.Urls.Add("http://+:8080"); // основной трафик
-		app.Urls.Add("http://+:9090"); // метрики Prometheus
+		app.Urls.Add($"http://+:{httpPort}");
+		app.Urls.Add($"http://+:{metricsPort}");
 
 		app.Run();
 	}
