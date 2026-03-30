@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics;
 using Prometheus;
 using VoxFox.Extensions;
 
@@ -22,8 +24,54 @@ public sealed class Program
 			.AddApplicationServices()
 			.AddMetrics();
 
+		// TODO: вынести в расширение как выше сервис
+		builder.Logging.ClearProviders();
+		builder.Logging.AddJsonConsole(options =>
+		{
+			options.IncludeScopes = true;
+			options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ ";
+			options.JsonWriterOptions = new JsonWriterOptions
+			{
+				Indented = false
+			};
+		});
+		builder.Logging.AddConsole();
+
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
+
+		// TODO: вынести как ниже все
+		app.UseExceptionHandler(appError =>
+		{
+			appError.Run(async context =>
+			{
+				context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+				context.Response.ContentType = "application/json";
+
+				var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
+				if (contextFeature != null)
+				{
+					var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+					var error = contextFeature.Error;
+
+					logger.LogError(error, "Unhandled exception occurred. TraceId: {TraceId}",
+						context.TraceIdentifier);
+
+					var response = new
+					{
+						error = "An error occurred while processing your request",
+						traceId = context.TraceIdentifier,
+
+						message = app.Environment.IsDevelopment() ? error.Message : null,
+						stackTrace = app.Environment.IsDevelopment() ? error.StackTrace : null,
+						type = app.Environment.IsDevelopment() ? error.GetType().Name : null
+					};
+
+					await context.Response.WriteAsJsonAsync(response);
+				}
+			});
+		});
+
 
 		// ── Middleware pipeline (порядок важен!) ──────────────────────────────
 		app.UseCors(CorsExtensions.PolicyName);
