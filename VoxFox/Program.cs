@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Prometheus;
 using VoxFox.Extensions;
@@ -23,19 +22,6 @@ public sealed class Program
 			.AddDatabase(builder.Configuration)
 			.AddApplicationServices()
 			.AddMetrics();
-
-		// TODO: вынести в расширение как выше сервис
-		builder.Logging.ClearProviders();
-		builder.Logging.AddJsonConsole(options =>
-		{
-			options.IncludeScopes = true;
-			options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ ";
-			options.JsonWriterOptions = new JsonWriterOptions
-			{
-				Indented = false
-			};
-		});
-		builder.Logging.AddConsole();
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
