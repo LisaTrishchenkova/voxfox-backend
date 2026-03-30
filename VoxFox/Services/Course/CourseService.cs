@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
 using VoxFox.Interfaces.Course;
 using VoxFox.Models.DTOs;
@@ -11,15 +12,29 @@ public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
     private readonly ILogger<CourseService> _logger;
+    private readonly ApplicationContext _context;
 
-    public CourseService(ICourseRepository courseRepository, ILogger<CourseService> logger)
+    public CourseService(ApplicationContext context, ICourseRepository courseRepository, ILogger<CourseService> logger)
     {
+	    _context = context;
         _courseRepository = courseRepository;
         _logger = logger;
     }
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto)
     {
+	    var categoryExists = await _context.Categories.AnyAsync(c => c.Id == createCourseDto.CategoryId);
+	    if (!categoryExists)
+	    {
+		    throw new Exception($"Категория с Id: {createCourseDto.CategoryId} не найдена");
+	    }
+
+	    var authorExists = await _context.Authors.AnyAsync(a => a.Id == createCourseDto.AuthorId);
+	    if (!authorExists)
+	    {
+		    throw new Exception($"Автор с Id: {createCourseDto.AuthorId} не найден");
+	    }
+
         var course = new Models.Entities.Course
         {
             Status = CourseStatus.Draft,
@@ -78,7 +93,7 @@ public class CourseService : ICourseService
 
     public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto)
     {
-            
+
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
         {
@@ -126,9 +141,9 @@ public class CourseService : ICourseService
         }
 
         var updateCourse = await _courseRepository.UpdateAsync(course);
-        
+
         return ServiceResult<CourseDto>.Ok(MapToDo(updateCourse));
-        
+
     }
 
     public async Task<ServiceResult<IList<SectionDto>>> GetSectionsByCourseIdAsync(Guid courseId)
@@ -171,7 +186,7 @@ public class CourseService : ICourseService
             {
                 Name = t.Name
             }).ToList(),
-            Author = new AuthorDto 
+            Author = new AuthorDto
             {
                 Id = course.Author!.Id,
                 Name = course.Author.Name
