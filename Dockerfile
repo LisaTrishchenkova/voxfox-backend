@@ -36,12 +36,20 @@ ARG BUILD_DATE
 ENV APP_VERSION=${APP_VERSION:-unknown}
 ENV GIT_COMMIT=${GIT_COMMIT:-unknown}
 ENV BUILD_DATE=${BUILD_DATE:-unknown}
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
-WORKDIR /src
-COPY . .
+WORKDIR /app
+COPY --from=build /app/publish .
+
 ENV ASPNETCORE_ENVIRONMENT=Development
-ENV DOTNET_WATCH=1
-ENTRYPOINT ["dotnet", "watch", "run", "--project", "VoxFox", "--no-launch-profile"]
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    icu-devtools \
+    libicu-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["dotnet", "WebAPI.dll"]
 
 # ============ TESTING ============
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS testing
