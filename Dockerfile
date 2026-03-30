@@ -49,7 +49,7 @@ RUN apt-get update && \
     libicu-dev \
     && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["dotnet", "WebAPI.dll"]
+ENTRYPOINT ["dotnet", "VoxFox.dll"]
 
 # ============ TESTING ============
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS testing
