@@ -97,7 +97,8 @@ namespace VoxFox.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.StackTrace);
+	            _logger.LogError(ex, "Ошибка при создании курса");
+	            return BadRequest(new { error = ex.Message });
             }
         }
 

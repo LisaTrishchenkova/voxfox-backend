@@ -7,7 +7,7 @@ using VoxFox.Models.Entities;
 namespace VoxFox.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/Authors")]
 public class AuthorController : ControllerBase
 {
 	private readonly ApplicationContext _context;
