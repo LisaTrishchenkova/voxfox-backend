@@ -6,7 +6,7 @@ using VoxFox.Models.Entities;
 namespace VoxFox.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/Categories")]
     public class CategoryController : ControllerBase
     {
         private readonly ApplicationContext _context;
