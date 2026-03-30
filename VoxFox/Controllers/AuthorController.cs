@@ -7,12 +7,12 @@ using VoxFox.Models.Entities;
 namespace VoxFox.Controllers;
 
 [ApiController]
-[Route("api/Authors")]
-public class AuthorController : ControllerBase
+[Route("api/[controller]")]
+public class AuthorsController : ControllerBase
 {
 	private readonly ApplicationContext _context;
 
-	public AuthorController(ApplicationContext context)
+	public AuthorsController(ApplicationContext context)
 	{
 		_context = context;
 	}
