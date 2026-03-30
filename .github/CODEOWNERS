@@ -1,0 +1,12 @@
+# Каждый PR в эти ветки требует ревью от team-lead
+/dev/ @team-lead
+/staging/ @team-lead
+/master @team-lead
+
+# За конкретные папки отвечают конкретные люди
+/VoxFox/Controllers/ @backend-team
+/VoxFox/Services/ @backend-team
+/docs/ @tech-writer
+
+# Все остальное за вами
+* @GulidovAlexander
