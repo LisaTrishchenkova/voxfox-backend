@@ -10,6 +10,8 @@ public sealed class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
+		var metricsPort = builder.Configuration["Ports:Metrics"] ?? "9090";
+
 		// ── Services ─────────────────────────────────────────────────────────
 		builder.Services
 			.AddCorsPolicy(builder.Configuration)
@@ -66,7 +68,10 @@ public sealed class Program
 		// ── Endpoints ─────────────────────────────────────────────────────────
 		app.MapSystemEndpoints();
 		app.MapControllers();
-		app.MapMetrics();
+
+		app.MapMetrics().RequireHost($"*:{metricsPort}");
+
+		app.Urls.Add($"http://+:{metricsPort}");
 
 		if (!app.Environment.IsProduction())
 		{
