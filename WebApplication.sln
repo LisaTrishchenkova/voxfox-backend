@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36623.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VoxFox", "VoxFox\VoxFox.csproj", "{8755DC8B-83C7-417D-B88F-EEE0DAB856A2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VoxFox.Tests", "VoxFox.Tests\VoxFox.Tests.csproj", "{FFAD21FD-35BC-4BD4-946C-E5BD169E5DF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFAD21FD-35BC-4BD4-946C-E5BD169E5DF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFAD21FD-35BC-4BD4-946C-E5BD169E5DF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFAD21FD-35BC-4BD4-946C-E5BD169E5DF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFAD21FD-35BC-4BD4-946C-E5BD169E5DF9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

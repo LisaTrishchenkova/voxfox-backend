@@ -6,7 +6,7 @@ using VoxFox.Models.DTOs;
 namespace VoxFox.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/Lessons")]
     public class LessonController(ILessonService lessonService) : ControllerBase
     {
         [HttpPost]
