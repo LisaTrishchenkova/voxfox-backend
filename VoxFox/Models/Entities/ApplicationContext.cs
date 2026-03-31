@@ -72,7 +72,27 @@ namespace VoxFox.Models.Entities
                     .HasMaxLength(200);
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
-
+                entity.Property(e => e.FullDescription)
+	                .IsRequired(false);
+                entity.Property(e => e.CoverImageUrl)
+	                .IsRequired(false)
+	                .HasMaxLength(500);
+                entity.Property(e => e.Price)
+	                .IsRequired()
+	                .HasColumnType("numeric(10,2)")
+	                .HasDefaultValue(0);
+                entity.Property(e => e.Level)
+	                .HasConversion<string>()
+	                .HasDefaultValue(CourseLevel.Beginner);
+                entity.Property(e => e.CertificateEnabled)
+	                .HasDefaultValue(false);
+                entity.Property(e => e.EnrollmentCount)
+	                .HasDefaultValue(0);
+                entity.Property(e => e.Rating)
+	                .HasColumnType("numeric(3,2)")
+	                .HasDefaultValue(0);
+                entity.Property(e => e.DurationMinutes)
+	                .HasDefaultValue(0);
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
@@ -83,11 +103,17 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.CategoryId);
                 entity.Property(e => e.AuthorId)
                     .IsRequired(false);
-
                 entity.Property(e => e.PublishedAt)
-                    .IsRequired()
-                    .HasColumnType("timestamp with time zone")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+	                .IsRequired(false)
+	                .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.CreatedAt)
+	                .IsRequired()
+	                .HasColumnType("timestamp with time zone")
+	                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt)
+	                .IsRequired()
+	                .HasColumnType("timestamp with time zone")
+	                .HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.HasQueryFilter(c => !c.IsDeleted);
             }
             );

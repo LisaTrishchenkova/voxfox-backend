@@ -2,9 +2,9 @@ namespace VoxFox.Enums
 {
     public enum CourseStatus
     {
-        Draft = 1,
-        Published = 2,
-        Moderation = 3,
-        Rejected = 4
+        Draft = 1, //создан, не отправлен
+        UnderReview = 2, //отправлен, у модератора
+        RejectedByModerator = 3, //отклонен - можно исправить и отправить снова
+        Published = 4 //одобрен и опубликован модератором
     }
 }
