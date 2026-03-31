@@ -12,6 +12,7 @@ public interface ICourseRepository
     Task<bool> DeleteSoftAsync(Models.Entities.Course course);
     Task<bool> ExistCourseByIdAsync(Guid id);
     Task<IList<Models.Entities.Section>> GetSectionsByCourseIdAsync(Guid courseId);
+    Task<IList<Models.Entities.Course>> GetByAuthorIdAsync(Guid authorId);
 
     IQueryable<Models.Entities.Course> GetCoursesQuery();
     IQueryable<Models.Entities.Course> GetPublishedCoursesQuery();
