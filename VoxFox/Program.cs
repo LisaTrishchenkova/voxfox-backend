@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
-using Prometheus;
+using Npgsql;
+using OpenTelemetry.Metrics;
 using VoxFox.Extensions;
 
 namespace VoxFox;
@@ -11,7 +12,6 @@ public sealed class Program
 		var builder = WebApplication.CreateBuilder(args);
 
 		var apiPort = builder.Configuration["Ports:Api"] ?? "8080";
-		var metricsPort = builder.Configuration["Ports:Metrics"] ?? "9090";
 
 		// ── Services ─────────────────────────────────────────────────────────
 		builder.Services
@@ -23,15 +23,19 @@ public sealed class Program
 			.AddApplicationServices()
 			.AddMetrics();
 
-		builder.Services.AddMetricServer(options =>
-		{
-			options.Port = ushort.Parse(metricsPort);
-		});
+		// ── OpenTelemetry Metrics ───────────────────────────────────────────
+		builder.Services.AddOpenTelemetry()
+			.WithMetrics(metrics =>
+			{
+				metrics.AddAspNetCoreInstrumentation();
+				metrics.AddNpgsqlInstrumentation();
+				metrics.AddPrometheusExporter();
+			});
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
 
-		// TODO: вынести как ниже все
+		// Обработка исключений
 		app.UseExceptionHandler(appError =>
 		{
 			appError.Run(async context =>
@@ -67,7 +71,8 @@ public sealed class Program
 		app.UseCors(CorsExtensions.PolicyName);
 		app.UseRouting();
 
-		app.UseHttpMetrics(options => options.ReduceStatusCodeCardinality());
+		// OpenTelemetry middleware для метрик
+		app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 		app.UseAuthentication();
 		app.UseAuthorization();
@@ -82,8 +87,12 @@ public sealed class Program
 			app.MapDebugEndpoints();
 		}
 
+		// Настраиваем основной сервер на API порт
 		app.Urls.Clear();
 		app.Urls.Add($"http://*:{apiPort}");
+
+		var logger = app.Services.GetRequiredService<ILogger<Program>>();
+		logger.LogInformation("Starting application - API port: {ApiPort}", apiPort);
 
 		app.Run();
 	}
