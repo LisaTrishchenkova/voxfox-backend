@@ -24,9 +24,19 @@ public sealed class Program
 			.AddMetrics();
 
 		builder.Services.AddMetricServer(options =>
-		{
-			options.Port = ushort.Parse(metricsPort);
-		});
+	   {
+		   if (!ushort.TryParse(metricsPort, out var port))
+		   {
+			   Console.WriteLine($"Invalid metrics port: '{metricsPort}', using default 9090");
+			   port = 9090;
+		   }
+
+		   options.Port = port;
+		   options.Hostname = "0.0.0.0";
+
+		   // options.Url = "/metrics"; // Путь по умолчанию
+		   // options.EnableOpenMetrics = true; // Включить OpenMetrics формат
+	   });
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
@@ -84,6 +94,10 @@ public sealed class Program
 
 		app.Urls.Clear();
 		app.Urls.Add($"http://*:{apiPort}");
+
+		var logger = app.Services.GetRequiredService<ILogger<Program>>();
+		logger.LogInformation("Starting application - API port: {ApiPort}, Metrics port: {MetricsPort}",
+			apiPort, metricsPort);
 
 		app.Run();
 	}
