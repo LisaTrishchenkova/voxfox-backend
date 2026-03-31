@@ -12,6 +12,7 @@ public sealed class Program
 		var builder = WebApplication.CreateBuilder(args);
 
 		var apiPort = builder.Configuration["Ports:Api"] ?? "8080";
+		var metricsPort = int.Parse(builder.Configuration["Ports:Metrics"] ?? "9090");
 
 		// ── Services ─────────────────────────────────────────────────────────
 		builder.Services
@@ -72,7 +73,7 @@ public sealed class Program
 		app.UseRouting();
 
 		// OpenTelemetry middleware для метрик
-		app.UseOpenTelemetryPrometheusScrapingEndpoint();
+		app.UseOpenTelemetryPrometheusScrapingEndpoint(context => context.Connection.LocalPort == metricsPort);
 
 		app.UseAuthentication();
 		app.UseAuthorization();
@@ -87,9 +88,9 @@ public sealed class Program
 			app.MapDebugEndpoints();
 		}
 
-		// Настраиваем основной сервер на API порт
 		app.Urls.Clear();
 		app.Urls.Add($"http://*:{apiPort}");
+		app.Urls.Add($"http://*:{metricsPort}");
 
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();
 		logger.LogInformation("Starting application - API port: {ApiPort}", apiPort);
