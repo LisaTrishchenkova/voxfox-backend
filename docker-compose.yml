@@ -6,9 +6,11 @@
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
-      - "9090:9090"
+      - "8080:8081"
+      - "9090:9091"
     environment:
+      - Ports__Api=8081
+      - Ports__Metrics=9091
       - ASPNETCORE_ENVIRONMENT=Development
       - DOTNET_USE_POLLING_FILE_WATCHER=1
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=voxfox_db;Username=postgres;Password=password

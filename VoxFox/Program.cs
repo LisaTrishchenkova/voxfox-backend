@@ -10,6 +10,7 @@ public sealed class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
+		var apiPort = builder.Configuration["Ports:Api"] ?? "8080";
 		var metricsPort = builder.Configuration["Ports:Metrics"] ?? "9090";
 
 		// ── Services ─────────────────────────────────────────────────────────
@@ -21,6 +22,11 @@ public sealed class Program
 			.AddDatabase(builder.Configuration)
 			.AddApplicationServices()
 			.AddMetrics();
+
+		builder.Services.AddMetricServer(options =>
+		{
+			options.Port = ushort.Parse(metricsPort);
+		});
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
@@ -60,6 +66,7 @@ public sealed class Program
 		// ── Middleware pipeline (порядок важен!) ──────────────────────────────
 		app.UseCors(CorsExtensions.PolicyName);
 		app.UseRouting();
+
 		app.UseHttpMetrics(options => options.ReduceStatusCodeCardinality());
 
 		app.UseAuthentication();
@@ -69,15 +76,14 @@ public sealed class Program
 		app.MapSystemEndpoints();
 		app.MapControllers();
 
-		app.MapMetrics().RequireHost($"*:{metricsPort}");
-
-		app.Urls.Add($"http://+:{metricsPort}");
-
 		if (!app.Environment.IsProduction())
 		{
 			app.UseSwaggerWithUi();
 			app.MapDebugEndpoints();
 		}
+
+		app.Urls.Clear();
+		app.Urls.Add($"http://*:{apiPort}");
 
 		app.Run();
 	}

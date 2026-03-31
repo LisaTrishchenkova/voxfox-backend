@@ -93,13 +93,13 @@ jobs:
             --settings coverlet.runsettings \
             --logger "trx"
 
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-${{ github.sha }}
-          path: ./TestResults
-          retention-days: 30
+      # - name: Upload coverage reports
+      #   if: always()
+      #   uses: actions/upload-artifact@v7
+      #   with:
+      #     name: coverage-${{ github.sha }}
+      #     path: ./TestResults
+      #     retention-days: 7
 
       - name: Check coverage threshold
         if: always()
@@ -121,12 +121,12 @@ jobs:
       - name: Publish artifact
         run: dotnet publish VoxFox/VoxFox.csproj -c ${{ env.CONFIGURATION }} -o ./publish
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-${{ github.sha }}
-          path: ./publish
-          retention-days: 30
+      # - name: Upload build artifact
+      #   uses: actions/upload-artifact@v7
+      #   with:
+      #     name: build-${{ github.sha }}
+      #     path: ./publish
+      #     retention-days: 7
 
   # Job 3: Комментарий в PR
   comment:
