@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Models.DTOs;
@@ -7,6 +8,7 @@ namespace VoxFox.Controllers
 {
     [ApiController]
     [Route("api/Categories")]
+    [Authorize]
     public class CategoryController : ControllerBase
     {
         private readonly ApplicationContext _context;
@@ -33,8 +35,8 @@ namespace VoxFox.Controllers
         [HttpPost]
         public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto createCategoryDto)
         {
-            var existingCategory = await _context.Categories
-                .AnyAsync(c => string.Equals(c.Name, createCategoryDto.Name, StringComparison.OrdinalIgnoreCase));
+	        var existingCategory = _context.Categories
+		        .Any(c => EF.Functions.ILike(c.Name, createCategoryDto.Name));
 
             if (existingCategory)
             {

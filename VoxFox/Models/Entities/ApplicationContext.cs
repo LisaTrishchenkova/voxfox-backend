@@ -12,6 +12,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Author> Authors { get; set; }
+        public DbSet<Enrollment> Enrollments { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -72,7 +73,27 @@ namespace VoxFox.Models.Entities
                     .HasMaxLength(200);
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
-
+                entity.Property(e => e.FullDescription)
+	                .IsRequired(false);
+                entity.Property(e => e.CoverImageUrl)
+	                .IsRequired(false)
+	                .HasMaxLength(500);
+                entity.Property(e => e.Price)
+	                .IsRequired()
+	                .HasColumnType("numeric(10,2)")
+	                .HasDefaultValue(0);
+                entity.Property(e => e.Level)
+	                .HasConversion<string>()
+	                .HasDefaultValue(CourseLevel.Beginner);
+                entity.Property(e => e.CertificateEnabled)
+	                .HasDefaultValue(false);
+                entity.Property(e => e.EnrollmentCount)
+	                .HasDefaultValue(0);
+                entity.Property(e => e.Rating)
+	                .HasColumnType("numeric(3,2)")
+	                .HasDefaultValue(0);
+                entity.Property(e => e.DurationMinutes)
+	                .HasDefaultValue(0);
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
@@ -83,11 +104,17 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.CategoryId);
                 entity.Property(e => e.AuthorId)
                     .IsRequired(false);
-
                 entity.Property(e => e.PublishedAt)
-                    .IsRequired()
-                    .HasColumnType("timestamp with time zone")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+	                .IsRequired(false)
+	                .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.CreatedAt)
+	                .IsRequired()
+	                .HasColumnType("timestamp with time zone")
+	                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt)
+	                .IsRequired()
+	                .HasColumnType("timestamp with time zone")
+	                .HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.HasQueryFilter(c => !c.IsDeleted);
             }
             );
@@ -150,6 +177,45 @@ namespace VoxFox.Models.Entities
                entity.Property(e => e.Id)
                        .HasColumnType("uuid")
                        .HasDefaultValueSql("gen_random_uuid()");
+           });
+
+           modelBuilder.Entity<Enrollment>(entity =>
+           {
+	           entity.HasKey(e => e.Id);
+
+	           entity.Property(e => e.Id)
+		           .HasColumnType("uuid")
+		           .HasDefaultValueSql("gen_random_uuid()");
+
+	           entity.Property(e => e.Status)
+		           .HasConversion<string>()
+		           .HasDefaultValue(EnrollmentStatus.Active);
+
+	           entity.Property(e => e.EnrolledAt)
+		           .IsRequired()
+		           .HasColumnType("timestamp with time zone")
+		           .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	           entity.Property(e => e.CompletedAt)
+		           .IsRequired(false)
+		           .HasColumnType("timestamp with time zone");
+
+	           entity.Property(e => e.ProgressPercent)
+		           .HasDefaultValue(0);
+
+	           // уникальный индекс — один пользователь не может записаться дважды
+	           entity.HasIndex(e => new { e.UserId, e.CourseId })
+		           .IsUnique();
+
+	           entity.HasOne(e => e.User)
+		           .WithMany()
+		           .HasForeignKey(e => e.UserId)
+		           .OnDelete(DeleteBehavior.Restrict);
+
+	           entity.HasOne(e => e.Course)
+		           .WithMany()
+		           .HasForeignKey(e => e.CourseId)
+		           .OnDelete(DeleteBehavior.Restrict);
            });
 
             base.OnModelCreating(modelBuilder);

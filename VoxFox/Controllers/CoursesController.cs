@@ -145,9 +145,12 @@ namespace VoxFox.Controllers
             [FromBody] UpdateCourseDto updateCourseDto
         )
         {
-            var courseUpdated = await _courseService.UpdateCourseAsync(id, updateCourseDto);
+            var result = await _courseService.UpdateCourseAsync(id, updateCourseDto);
 
-            return Ok(courseUpdated);
+            if (!result.Success)
+	            return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+            return Ok(result.Data);
         }
 
         [HttpGet("{courseId}/sections")]
@@ -173,6 +176,65 @@ namespace VoxFox.Controllers
                 return StatusCode(500, $"Ошибка сервера: {ex.Message}");
             }
         }
+
+        [HttpGet("my")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IList<CourseDto>))]
+        public async Task<ActionResult<IList<CourseDto>>> GetMyCourses(
+	        [FromQuery] Guid authorId) // заменить потом на JWT
+        {
+	        var result = await _courseService.GetMyCoursesAsync(authorId);
+
+	        if (!result.Success)
+		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+	        return Ok(result.Data);
+        }
+
+        [HttpPut("{id}/moderate")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ModerateCourse([FromRoute] Guid id)
+        {
+	        var result = await _courseService.ModeratorCourseAsync(id);
+
+	        if (!result.Success)
+		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+	        return NoContent();
+        }
+
+        [HttpPut("{id}/approve")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ApproveCourse([FromRoute] Guid id)
+        {
+	        var result = await _courseService.ApproveCourseAsync(id);
+
+	        if (!result.Success)
+		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+	        return NoContent();
+        }
+
+        [HttpPut("{id}/reject")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> RejectCourse(
+	        [FromRoute] Guid id,
+	        [FromBody] RejectCourseRequest request)
+        {
+	        var result = await _courseService.RejectCourseAsync(id, request.Reason);
+
+	        if (!result.Success)
+		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+	        return NoContent();
+        }
+
+
 
         // [HttpPatch("{id}")]
         // [ProducesResponseType(StatusCodes.Status204NoContent)]

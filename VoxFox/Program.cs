@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Diagnostics;
-using Prometheus;
 using VoxFox.Extensions;
 
 namespace VoxFox;
@@ -10,57 +8,30 @@ public sealed class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		var metricsPort = builder.Configuration["Ports:Metrics"] ?? "9090";
+		var apiPort = builder.Configuration["Ports:Api"] ?? "8080";
+		var metricsPort = int.Parse(builder.Configuration["Ports:Metrics"] ?? "9090");
 
-		// ── Services ─────────────────────────────────────────────────────────
+		// ── Services ──────────────────────────────────────────────────────────
 		builder.Services
 			.AddCorsPolicy(builder.Configuration)
 			.AddApiControllers()
-			.AddSwaggerWithAuth()
+			.AddApiDocumentation()
 			.AddJwtAuthentication(builder.Configuration)
 			.AddDatabase(builder.Configuration)
 			.AddApplicationServices()
-			.AddMetrics();
+			.AddMetrics()
+			.AddOpenTelemetryMetrics();
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
 
-		// TODO: вынести как ниже все
-		app.UseExceptionHandler(appError =>
-		{
-			appError.Run(async context =>
-			{
-				context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-				context.Response.ContentType = "application/json";
-
-				var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
-				if (contextFeature != null)
-				{
-					var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-					var error = contextFeature.Error;
-
-					logger.LogError(error, "Unhandled exception occurred. TraceId: {TraceId}",
-						context.TraceIdentifier);
-
-					var response = new
-					{
-						error = "An error occurred while processing your request",
-						traceId = context.TraceIdentifier,
-
-						message = app.Environment.IsDevelopment() ? error.Message : null,
-						stackTrace = app.Environment.IsDevelopment() ? error.StackTrace : null,
-						type = app.Environment.IsDevelopment() ? error.GetType().Name : null
-					};
-
-					await context.Response.WriteAsJsonAsync(response);
-				}
-			});
-		});
-
 		// ── Middleware pipeline (порядок важен!) ──────────────────────────────
+		app.UseGlobalExceptionHandler(app.Environment);
+
 		app.UseCors(CorsExtensions.PolicyName);
 		app.UseRouting();
-		app.UseHttpMetrics(options => options.ReduceStatusCodeCardinality());
+
+		app.UseOpenTelemetryPrometheusScrapingEndpoint(context => context.Connection.LocalPort == metricsPort);
 
 		app.UseAuthentication();
 		app.UseAuthorization();
@@ -69,15 +40,18 @@ public sealed class Program
 		app.MapSystemEndpoints();
 		app.MapControllers();
 
-		app.MapMetrics().RequireHost($"*:{metricsPort}");
-
-		app.Urls.Add($"http://+:{metricsPort}");
-
-		if (!app.Environment.IsProduction())
+		if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 		{
-			app.UseSwaggerWithUi();
+			app.UseApiDocumentation();
 			app.MapDebugEndpoints();
 		}
+
+		app.Urls.Clear();
+		app.Urls.Add($"http://*:{apiPort}");
+		app.Urls.Add($"http://*:{metricsPort}");
+
+		var logger = app.Services.GetRequiredService<ILogger<Program>>();
+		logger.LogInformation("Starting application - API port: {ApiPort}", apiPort);
 
 		app.Run();
 	}

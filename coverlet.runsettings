@@ -5,8 +5,21 @@
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <Format>cobertura,json,lcov</Format>
-          <Exclude>[xunit.*]*,[*.Tests]*,[*.Test]*,[Microsoft.*]*,[System.*]*</Exclude>
-          <Include>[VoxFox*]*</Include>
+          <Include>[VoxFox]*</Include>
+          <Exclude>
+            [xunit.*]*,
+            [*.Tests]*,
+            [*.Test]*,
+            [Microsoft.*]*,
+            [System.*]*,
+            [VoxFox]*Migrations*,
+            [VoxFox]*Models.Entities*,
+            [VoxFox]*Models.DTOs*,
+            [VoxFox]*Models.Requests*,
+            [VoxFox]*Models.Responses*,
+            [VoxFox]*Infrastructure*,
+            [VoxFox]VoxFox.Program
+          </Exclude>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
         </Configuration>
       </DataCollector>
