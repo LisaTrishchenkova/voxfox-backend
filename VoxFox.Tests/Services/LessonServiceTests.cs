@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using Microsoft.Extensions.Logging;
 using Moq;
 using VoxFox.Interfaces.Lesson;
@@ -23,19 +23,17 @@ public class LessonServiceTests
 	[Fact]
 	public async Task CreateLessonAsync_WhenSectionIdIsEmpty_ReturnsBadRequest()
 	{
-		// Arrange
-		var dto = new CreateLessonDto {
+		var dto = new CreateLessonDto
+		{
 			Title = "Урок 1",
 			Content = "Content",
 			Description = "Description"
 		};
 
-		// Act
 		var result = await _sut.CreateLessonAsync(Guid.Empty, dto);
 
-		// Assert
-		result.Success.Should().BeFalse();
-		result.StatusCode.Should().Be(400);
+		result.Success.ShouldBeFalse();
+		result.StatusCode.ShouldBe(400);
 		_repoMock.Verify(
 			r => r.SectionExistsAsync(It.IsAny<Guid>()),
 			Times.Never);
@@ -45,7 +43,8 @@ public class LessonServiceTests
 	public async Task CreateLessonAsync_WhenSectionNotFound_Returns404()
 	{
 		var sectionId = Guid.NewGuid();
-		var dto = new CreateLessonDto {
+		var dto = new CreateLessonDto
+		{
 			Title = "Урок 1",
 			Content = "Content",
 			Description = "Description"
@@ -57,9 +56,8 @@ public class LessonServiceTests
 
 		var result = await _sut.CreateLessonAsync(sectionId, dto);
 
-		result.Success.Should().BeFalse();
-		result.StatusCode.Should().Be(404);
-
+		result.Success.ShouldBeFalse();
+		result.StatusCode.ShouldBe(404);
 		_repoMock.Verify(r => r.AddAsync(It.IsAny<Lesson>()), Times.Never);
 	}
 
@@ -67,7 +65,8 @@ public class LessonServiceTests
 	public async Task CreateLessonAsync_WhenValid_ReturnsCreatedLesson()
 	{
 		var sectionId = Guid.NewGuid();
-		var dto = new CreateLessonDto {
+		var dto = new CreateLessonDto
+		{
 			Title = "Урок 1",
 			Content = "Content",
 			Description = "Description"
@@ -92,9 +91,10 @@ public class LessonServiceTests
 
 		var result = await _sut.CreateLessonAsync(sectionId, dto);
 
-		result.Success.Should().BeTrue();
-		result.StatusCode.Should().Be(201);
-		result.Data!.Title.Should().Be(dto.Title);
-		result.Data.Id.Should().Be(savedLesson.Id);
+		result.Success.ShouldBeTrue();
+		result.StatusCode.ShouldBe(201);
+		result.Data.ShouldNotBeNull();
+		result.Data.Title.ShouldBe(dto.Title);
+		result.Data.Id.ShouldBe(savedLesson.Id);
 	}
 }
