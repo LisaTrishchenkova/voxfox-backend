@@ -40,7 +40,7 @@ public sealed class Program
 		app.MapSystemEndpoints();
 		app.MapControllers();
 
-		if (!app.Environment.IsProduction())
+		if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 		{
 			app.UseApiDocumentation();
 			app.MapDebugEndpoints();
