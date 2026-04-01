@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Models.DTOs;
@@ -7,6 +8,7 @@ namespace VoxFox.Controllers
 {
     [ApiController]
     [Route("api/Categories")]
+    [Authorize]
     public class CategoryController : ControllerBase
     {
         private readonly ApplicationContext _context;
