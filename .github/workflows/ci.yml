@@ -106,14 +106,25 @@ jobs:
         run: |
           COVERAGE=$(grep -oP 'line-rate="\K[^"]+' ./TestResults/**/*.xml | head -1 | awk '{printf "%.0f", $1 * 100}')
           echo "Coverage: ${COVERAGE}%"
-          if [ "$COVERAGE" -lt "${{ env.COVERAGE_THRESHOLD }}" ]; then
-            echo "⚠️ Coverage is below ${{ env.COVERAGE_THRESHOLD }}%"
-            echo "coverage_status=warning" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Coverage meets threshold"
-            echo "coverage_status=passed" >> $GITHUB_OUTPUT
-          fi
           echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
+
+          if [ "$COVERAGE" -lt "${{ env.COVERAGE_THRESHOLD }}" ]; then
+            echo "coverage_status=warning" >> $GITHUB_OUTPUT
+            STATUS="⚠️ Below threshold"
+            # TODO: раскомментировать когда coverage достигнет ${{ env.COVERAGE_THRESHOLD }}%
+            # exit 1
+          else
+            echo "coverage_status=passed" >> $GITHUB_OUTPUT
+            STATUS="✅ Passed"
+          fi
+
+          # Summary
+          echo "## 🧪 Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Coverage | **${COVERAGE}%** |" >> $GITHUB_STEP_SUMMARY
+          echo "| Threshold | ${{ env.COVERAGE_THRESHOLD }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${STATUS} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Publish artifact
         run: dotnet publish VoxFox/VoxFox.csproj -c ${{ env.CONFIGURATION }} -o ./publish
