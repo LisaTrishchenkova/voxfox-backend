@@ -21,7 +21,6 @@ env:
   COVERAGE_THRESHOLD: 80
 
 jobs:
-  # Job 1: Быстрая проверка кода (линтинг, уязвимости)
   lint:
     timeout-minutes: 10
     runs-on: ubuntu-24.04
@@ -56,7 +55,6 @@ jobs:
           echo "### Deprecated packages:" >> $GITHUB_STEP_SUMMARY
           dotnet list package --deprecated --include-transitive 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "⚠️ No deprecated packages found"
 
-  # Job 2: Сборка и тесты
   build-and-test:
     timeout-minutes: 15
     runs-on: ubuntu-24.04
@@ -127,7 +125,6 @@ jobs:
       #     path: ./publish
       #     retention-days: 7
 
-  # Job 3: Комментарий в PR
   comment:
     runs-on: ubuntu-24.04
     needs: [lint, build-and-test]
@@ -173,7 +170,6 @@ jobs:
 
             Please check the logs and fix the issues.
 
-  # Job 4: Уведомление о низком покрытии кода (опционально)
   coverage-warning:
     runs-on: ubuntu-24.04
     needs: [build-and-test]
