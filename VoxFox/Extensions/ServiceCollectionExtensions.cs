@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Interfaces;
 using VoxFox.Interfaces.Course;
+using VoxFox.Interfaces.Enrollment;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Interfaces.Section;
 using VoxFox.Models.Entities;
@@ -22,6 +23,8 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<ISectionService, SectionService>();
 		services.AddScoped<ILessonRepository, LessonRepository>();
 		services.AddScoped<ILessonService, LessonService>();
+		services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
+		services.AddScoped<IEnrollmentService, EnrollmentService>();
 		services.AddScoped<IJwtService, JwtService>();
 
 		return services;
