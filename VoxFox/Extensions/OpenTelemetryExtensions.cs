@@ -49,7 +49,7 @@ public static class OpenTelemetryExtensions
 					.AddAspNetCoreInstrumentation()
 					.AddNpgsql();
 
-				if (environment == "Development" && string.IsNullOrEmpty(tempoEndpoint))
+				if (string.IsNullOrEmpty(tempoEndpoint))
 				{
 					tracing.AddConsoleExporter();
 				}
