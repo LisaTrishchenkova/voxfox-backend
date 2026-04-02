@@ -20,7 +20,8 @@ public sealed class Program
 			.AddDatabase(builder.Configuration)
 			.AddApplicationServices()
 			.AddMetrics()
-			.AddOpenTelemetryMetrics();
+			.AddOpenTelemetryMetrics()
+			.AddOpenTelemetryTracing(builder.Configuration);
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
