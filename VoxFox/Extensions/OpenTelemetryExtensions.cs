@@ -54,8 +54,13 @@ public static class OpenTelemetryExtensions
 					tracing.AddConsoleExporter();
 				}
 
+				Console.WriteLine($"Проврека tempoEndpoint: ${tempoEndpoint}");
+
 				if (!string.IsNullOrEmpty(tempoEndpoint))
 				{
+					// Всегда добавляем ConsoleExporter для отладки (можно убрать позже)
+					tracing.AddConsoleExporter();
+
 					tracing.AddOtlpExporter(options =>
 					{
 						options.Endpoint = new Uri(tempoEndpoint);
