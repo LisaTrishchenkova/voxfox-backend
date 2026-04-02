@@ -29,7 +29,7 @@ public class CourseService : ICourseService
 			    .AnyAsync(c => c.Id == createCourseDto.CategoryId.Value);
 		    if (!categoryExists)
 		    {
-			    throw new Exception($"Категория с Id: {createCourseDto.CategoryId} не найдена");
+			    throw new System.Exception($"Категория с Id: {createCourseDto.CategoryId} не найдена");
 		    }
 	    }
 
@@ -39,7 +39,7 @@ public class CourseService : ICourseService
 			    .AnyAsync(a => a.Id == createCourseDto.AuthorId.Value);
 		    if (!authorExists)
 		    {
-			    throw new Exception($"Автор с Id: {createCourseDto.AuthorId} не найден");
+			    throw new System.Exception($"Автор с Id: {createCourseDto.AuthorId} не найден");
 		    }
 	    }
 
@@ -68,7 +68,7 @@ public class CourseService : ICourseService
         var createdCourse = await _courseRepository.AddAsync(course);
         if (createdCourse == null)
         {
-            throw new Exception("Не удалось добавить курс");
+            throw new System.Exception("Не удалось добавить курс");
         }
         return MapToDo(createdCourse);
     }
@@ -87,7 +87,7 @@ public class CourseService : ICourseService
     {
         var courses = await _courseRepository.GetAllAsync();
         if (courses == null)
-            throw new Exception("Не удалось получить список курсов");
+            throw new System.Exception("Не удалось получить список курсов");
 
         var coursesDto = courses
             .Select(MapToDo)
@@ -200,7 +200,7 @@ public class CourseService : ICourseService
             var sectionsDto = sections.Select(MapToDo).ToList();
             return ServiceResult<IList<SectionDto>>.Ok(sectionsDto);
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             return ServiceResult<IList<SectionDto>>.Fail(
                 $"Ошибка при получении разделов курса: {ex.Message}",
@@ -294,7 +294,7 @@ public class CourseService : ICourseService
                 PageSize = request.PageSize
             };
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             _logger.LogError(ex, "Ошибка при поиске курсов: {SearchTerm}", request.SearchTerm);
             throw;

@@ -6,6 +6,7 @@ using VoxFox.Interfaces.Course;
 using VoxFox.Interfaces.Enrollment;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Interfaces.Section;
+using VoxFox.Interfaces.Task;
 using VoxFox.Models.Entities;
 using VoxFox.Repositories;
 using VoxFox.Services;
@@ -25,6 +26,9 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<ILessonService, LessonService>();
 		services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 		services.AddScoped<IEnrollmentService, EnrollmentService>();
+		services.AddScoped<ITaskRepository, TaskRepository>();
+		services.AddMediatR(cfg =>
+			cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 		services.AddScoped<IJwtService, JwtService>();
 
 		return services;

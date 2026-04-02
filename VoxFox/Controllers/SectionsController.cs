@@ -40,7 +40,7 @@ namespace VoxFox.Controllers
                     new { id = result.Data!.Id },
                     result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 var message = ex.Message;
                 return StatusCode(500, message);
@@ -65,7 +65,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -93,7 +93,7 @@ namespace VoxFox.Controllers
 
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -121,7 +121,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -145,7 +145,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, $"Ошибка сервера: {ex.Message}");
             }

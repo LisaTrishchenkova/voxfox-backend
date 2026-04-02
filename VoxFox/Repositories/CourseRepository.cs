@@ -139,7 +139,7 @@ public class CourseRepository : ICourseRepository
 				.ToListAsync();
 			return courses;
 		}
-		catch (Exception ex)
+		catch (System.Exception ex)
 		{
 			_logger.LogError(ex.Message);
 			throw;
