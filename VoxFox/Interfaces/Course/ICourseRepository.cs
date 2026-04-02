@@ -21,5 +21,5 @@ public interface ICourseRepository
         int skip,
         int take);
     Task<int> GetTotalCountAsync(IQueryable<Models.Entities.Course> query);
-    Task DeleteTagAsync(Tag existingTag);
+    System.Threading.Tasks.Task DeleteTagAsync(Tag existingTag);
 }

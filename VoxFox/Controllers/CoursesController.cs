@@ -62,7 +62,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при поиске курсов");
                 return StatusCode(500, new { error = "Внутренняя ошибка сервера" });
@@ -95,7 +95,7 @@ namespace VoxFox.Controllers
                 var course = await _courseService.CreateCourseAsync(createCourseDto);
                 return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, course);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
 	            _logger.LogError(ex, "Ошибка при создании курса");
 	            return BadRequest(new { error = ex.Message });
@@ -117,7 +117,7 @@ namespace VoxFox.Controllers
 
                 return Ok(course);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -171,7 +171,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, $"Ошибка сервера: {ex.Message}");
             }
