@@ -41,6 +41,14 @@ public sealed class Program
 		app.MapSystemEndpoints();
 		app.MapControllers();
 
+		app.MapGet("/debug/otel-status", () => new
+		{
+			tempoEndpoint = Environment.GetEnvironmentVariable("TEMPO_ENDPOINT"),
+			environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+			hasOtel = AppDomain.CurrentDomain.GetAssemblies()
+		.Any(a => a.FullName?.Contains("OpenTelemetry") == true)
+		});
+
 		if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 		{
 			app.UseApiDocumentation();
