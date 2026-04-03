@@ -128,6 +128,7 @@ public class CourseRepository : ICourseRepository
 
 	}
 
+	//TODO: доделать чтобы было из Jwt
 	public async Task<IList<Course>> GetByAuthorIdAsync(Guid authorId)
 	{
 		try

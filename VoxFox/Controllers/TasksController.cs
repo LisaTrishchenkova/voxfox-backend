@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VoxFox.Extensions;
 using VoxFox.Features.Tasks.Commands.CreateMultiChoiceTask;
@@ -23,6 +24,7 @@ public class TasksController : ControllerBase
 	}
 
 	[HttpPost("api/lessons/{lessonId}/tasks/single-choice")]
+	[Authorize(Roles = "Teacher,Admin")]
 	[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TaskTeacherDto))]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]
 	public async Task<ActionResult<TaskTeacherDto>> CreateSingleChoiceTask(
@@ -44,7 +46,9 @@ public class TasksController : ControllerBase
 		var result = await _mediator.Send(command);
 		return CreatedAtAction(nameof(GetTaskById), new { id = result.Id }, result);
 	}
+
 	[HttpPost("api/lessons/{lessonId}/tasks/multi-choice")]
+	[Authorize(Roles = "Teacher,Admin")]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TaskTeacherDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TaskTeacherDto>> CreateMultiChoiceTask(
@@ -68,6 +72,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost("api/lessons/{lessonId}/tasks/text-input")]
+    [Authorize(Roles = "Teacher,Admin")]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TaskTeacherDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TaskTeacherDto>> CreateTextInputTask(
@@ -90,6 +95,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("api/lessons/{lessonId}/tasks")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IList<object>>> GetTasksByLesson(
         [FromRoute] Guid lessonId,
@@ -106,6 +112,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("api/tasks/{id}")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<object>> GetTaskById(
@@ -123,6 +130,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost("api/tasks/{id}/submit")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TaskSubmissionDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -148,6 +156,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("api/tasks/{id}/submissions")]
+    [Authorize(Roles = "Teacher,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IList<TaskSubmissionDto>))]
     public async Task<ActionResult<IList<TaskSubmissionDto>>> GetSubmissions(
         [FromRoute] Guid id)
@@ -158,6 +167,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpPut("api/tasks/reorder")]
+    [Authorize(Roles = "Teacher,Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ReorderTasks(
