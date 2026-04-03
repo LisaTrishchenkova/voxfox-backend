@@ -12,7 +12,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Tag> Tags { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Category> Categories { get; set; }
-        public DbSet<Author> Authors { get; set; }
+        // public DbSet<Author> Authors { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<TaskEntity> Tasks { get; set; }
         public DbSet<TaskSubmission> TaskSubmissions { get; set; }
@@ -48,10 +48,11 @@ namespace VoxFox.Models.Entities
                 .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Course>()
-               .HasOne(c => c.Author)
-               .WithMany(a => a.Courses)
-               .HasForeignKey(c => c.AuthorId)
-               .OnDelete(DeleteBehavior.Restrict);
+	            .HasOne(c => c.Author)
+	            .WithMany(u => u.Courses)  
+	            .HasForeignKey(c => c.AuthorId)
+	            .OnDelete(DeleteBehavior.Restrict);
+
 
             modelBuilder.Entity<User>(entity =>
             {
@@ -67,6 +68,9 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Password)
                     .IsRequired()
                     .HasMaxLength(100);
+                entity.Property(e => e.Role)
+	                .HasConversion<string>()
+	                .HasDefaultValue(UserRole.Student);
             });
             modelBuilder.Entity<Course>(entity =>
             {
@@ -169,18 +173,18 @@ namespace VoxFox.Models.Entities
 
             });
 
-            modelBuilder.Entity<Author>(entity =>
-           {
-               entity.HasKey(e => e.Id);
-
-               entity.Property(e => e.Name)
-                        .IsRequired()
-                       .HasMaxLength(200);
-
-               entity.Property(e => e.Id)
-                       .HasColumnType("uuid")
-                       .HasDefaultValueSql("gen_random_uuid()");
-           });
+           //  modelBuilder.Entity<Author>(entity =>
+           // {
+           //     entity.HasKey(e => e.Id);
+           //
+           //     entity.Property(e => e.Name)
+           //              .IsRequired()
+           //             .HasMaxLength(200);
+           //
+           //     entity.Property(e => e.Id)
+           //             .HasColumnType("uuid")
+           //             .HasDefaultValueSql("gen_random_uuid()");
+           // });
 
            modelBuilder.Entity<Enrollment>(entity =>
            {

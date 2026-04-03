@@ -8,7 +8,6 @@ namespace VoxFox.Controllers
 {
     [ApiController]
     [Route("api/Categories")]
-    [Authorize]
     public class CategoryController : ControllerBase
     {
         private readonly ApplicationContext _context;
@@ -33,6 +32,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto createCategoryDto)
         {
 	        var existingCategory = _context.Categories
@@ -61,6 +61,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<CategoryDto>> UpdateCategory(Guid id, CreateCategoryDto updateCategoryDto)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -91,6 +92,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCategory(Guid id)
         {
             var category = await _context.Categories.FindAsync(id);

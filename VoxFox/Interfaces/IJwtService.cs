@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using VoxFox.Enums;
 
 namespace VoxFox.Interfaces
 {
@@ -8,6 +9,6 @@ namespace VoxFox.Interfaces
         string GenerateRefreshToken();
         ClaimsPrincipal GetPrincipalFromExpiredToken(string token);
         Task<bool> ValidateTokenAsync(string token);
-        IEnumerable<Claim> CreateClaims(Guid userId, string email);
+        IEnumerable<Claim> CreateClaims(Guid userId, string email, UserRole role);
     }
 }

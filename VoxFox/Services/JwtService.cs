@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
+using VoxFox.Enums;
 using VoxFox.Interfaces;
 
 namespace VoxFox.Services
@@ -16,12 +17,13 @@ namespace VoxFox.Services
             _signingKey = signingKey;
         }
 
-        public IEnumerable<Claim> CreateClaims(Guid userId, string email)
+        public IEnumerable<Claim> CreateClaims(Guid userId, string email, UserRole role)
         {
             var claims = new List<Claim>()
             {
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, email)
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(ClaimTypes.Role, role.ToString())
             };
 
             return claims;

@@ -21,7 +21,7 @@ public class CourseService : ICourseService
         _logger = logger;
     }
 
-    public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto)
+    public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto, Guid authorId)
     {
 	    if (createCourseDto.CategoryId.HasValue)
 	    {
@@ -32,18 +32,9 @@ public class CourseService : ICourseService
 			    throw new System.Exception($"Категория с Id: {createCourseDto.CategoryId} не найдена");
 		    }
 	    }
-
-	    if (createCourseDto.AuthorId.HasValue)
-	    {
-		    var authorExists = await _context.Authors
-			    .AnyAsync(a => a.Id == createCourseDto.AuthorId.Value);
-		    if (!authorExists)
-		    {
-			    throw new System.Exception($"Автор с Id: {createCourseDto.AuthorId} не найден");
-		    }
-	    }
-
-
+	    var author = await _context.Users.FirstOrDefaultAsync(u => u.Id == authorId);
+	    if (author == null)
+		    throw new System.Exception("Пользователь не найден");
         var course = new Models.Entities.Course
         {
             Status = CourseStatus.Draft,
@@ -55,7 +46,7 @@ public class CourseService : ICourseService
             Level = createCourseDto.Level,
             CertificateEnabled = createCourseDto.CertificateEnabled,
             CategoryId = createCourseDto.CategoryId,
-            AuthorId = createCourseDto.AuthorId,
+            AuthorId = authorId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             PublishedAt = null,
@@ -73,11 +64,14 @@ public class CourseService : ICourseService
         return MapToDo(createdCourse);
     }
 
-    public async Task<bool> DeleteCourseAsync(Guid id)
+    public async Task<bool> DeleteCourseAsync(Guid id, Guid userId)
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
             return false;
+
+        if (course.AuthorId != userId)
+	        return false;
 
         var isSuccess = await _courseRepository.DeleteSoftAsync(course);
         return isSuccess;
@@ -107,7 +101,7 @@ public class CourseService : ICourseService
         return courseDto;
     }
 
-    public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto)
+    public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto, Guid userId)
     {
 
         var course = await _courseRepository.GetByIdAsync(id);
@@ -118,6 +112,8 @@ public class CourseService : ICourseService
                 StatusCodes.Status404NotFound
             );
         }
+        if (course.AuthorId != userId)
+	        return ServiceResult<CourseDto>.Fail("Нет доступа к этому курсу", StatusCodes.Status403Forbidden);
         if (updateCourseDto.CategoryId.HasValue)
         {
 	        var categoryExists = await _context.Categories
@@ -387,9 +383,9 @@ public class CourseService : ICourseService
         return ServiceResult<bool>.Ok(true);
     }
 
-    public async Task<ServiceResult<IList<CourseDto>>> GetMyCoursesAsync(Guid authorId)
+    public async Task<ServiceResult<IList<CourseDto>>> GetMyCoursesAsync(Guid userId)
     {
-	    var course = await _courseRepository.GetByAuthorIdAsync(authorId);
+	    var course = await _courseRepository.GetByAuthorIdAsync(userId);
 
 	    var resualt = course.Select(MapToDo).ToList();
 	    return ServiceResult<IList<CourseDto>>.Ok(resualt);
