@@ -98,14 +98,13 @@ public class TasksController : ControllerBase
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IList<object>>> GetTasksByLesson(
-        [FromRoute] Guid lessonId,
-        [FromQuery] bool isTeacher = false)
+	    [FromRoute] Guid lessonId)
     {
-        var query = new GetTasksByLessonQuery
-        {
-            LessonId = lessonId,
-            IsTeacher = isTeacher
-        };
+	    var query = new GetTasksByLessonQuery
+	    {
+		    LessonId = lessonId,
+		    IsTeacher = User.IsInRole("Teacher") || User.IsInRole("Admin")
+	    };
 
         var result = await _mediator.Send(query);
         return Ok(result);
@@ -122,7 +121,7 @@ public class TasksController : ControllerBase
         var query = new GetTaskByIdQuery
         {
             TaskId = id,
-            IsTeacher = isTeacher
+            IsTeacher = User.IsInRole("Teacher") || User.IsInRole("Admin")
         };
 
         var result = await _mediator.Send(query);
