@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using VoxFox.Interfaces.Course;
+using VoxFox.Enums;
+using VoxFox.Interfaces;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
@@ -52,10 +53,12 @@ public class CourseRepository : ICourseRepository
 			_logger.LogError(ex.Message);
 			throw;
 		}
-
 	}
 
-	public Task<bool> ExistCourseByIdAsync(Guid id) => _context.Courses.AnyAsync(c => c.Id == id);
+	public Task<bool> ExistCourseByIdAsync(Guid id)
+	{
+		return _context.Courses.AnyAsync(c => c.Id == id);
+	}
 
 	public async Task<IList<Course>?> GetAllAsync()
 	{
@@ -125,7 +128,6 @@ public class CourseRepository : ICourseRepository
 			_logger.LogError(ex.Message);
 			throw;
 		}
-
 	}
 
 	//TODO: доделать чтобы было из Jwt
@@ -147,65 +149,78 @@ public class CourseRepository : ICourseRepository
 		}
 	}
 
-public IQueryable<Course> GetCoursesQuery()
-    {
-        return _context.Courses
-            // .Include(c => c.Category)
-            .AsNoTracking()
-            .AsQueryable();
-    }
+	public IQueryable<Course> GetCoursesQuery()
+	{
+		return _context.Courses
+			// .Include(c => c.Category)
+			.AsNoTracking()
+			.AsQueryable();
+	}
 
-    public IQueryable<Course> GetPublishedCoursesQuery()
-    {
-        return _context.Courses
-            .Where(c => c.Status == Enums.CourseStatus.Published)
-            .AsNoTracking()
-            .Include(c => c.Author)
-            .AsQueryable();
-    }
-    public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
-    {
-        return await query
-            .Skip(skip)
-            .Take(take)
-            .Select(c => new CourseDto
-            {
-                Id = c.Id,
-                Title = c.Title,
-                Description = c.Description,
-                FullDescription = c.FullDescription,
-                CoverImageUrl = c.CoverImageUrl,
-                Price = c.Price,
-                Level = c.Level,
-                CertificateEnabled = c.CertificateEnabled,
-                EnrollmentCount = c.EnrollmentCount,
-                Rating = c.Rating,
-                DurationMinutes = c.DurationMinutes,
-                Status = c.Status,
-                Tags = c.Tags != null ? c.Tags.Select(t => new TagDto
-                {
-                    Name = t.Name
-                }).ToList() : new List<TagDto>(),
-                CategoryId = c.CategoryId,
-                Author = new AuthorDto
-                {
-                    Id = c.Author!.Id,
-                    Name = c.Author.Name
-                },
-                PublishedAt = c.PublishedAt,
-                CreatedAt = c.CreatedAt
-            })
-            .ToListAsync();
-    }
+	public IQueryable<Course> GetPublishedCoursesQuery()
+	{
+		return _context.Courses
+			.Where(c => c.Status == CourseStatus.Published)
+			.AsNoTracking()
+			.Include(c => c.Author)
+			.AsQueryable();
+	}
 
-    public async Task<int> GetTotalCountAsync(IQueryable<Course> query)
-    {
-        return await query.CountAsync();
-    }
+	public async Task<List<CourseDto>> GetCoursesWithProjectionAsync(IQueryable<Course> query, int skip, int take)
+	{
+		return await query
+			.Skip(skip)
+			.Take(take)
+			.Select(c => new CourseDto
+			{
+				Id = c.Id,
+				Title = c.Title,
+				Description = c.Description,
+				FullDescription = c.FullDescription,
+				CoverImageUrl = c.CoverImageUrl,
+				Price = c.Price,
+				Level = c.Level,
+				CertificateEnabled = c.CertificateEnabled,
+				EnrollmentCount = c.EnrollmentCount,
+				Rating = c.Rating,
+				DurationMinutes = c.DurationMinutes,
+				Status = c.Status,
+				Tags = c.Tags != null
+					? c.Tags.Select(t => new TagDto
+					{
+						Name = t.Name
+					}).ToList()
+					: new List<TagDto>(),
+				CategoryId = c.CategoryId,
+				Author = new AuthorDto
+				{
+					Id = c.Author!.Id,
+					Name = c.Author.Name
+				},
+				PublishedAt = c.PublishedAt,
+				CreatedAt = c.CreatedAt
+			})
+			.ToListAsync();
+	}
 
-    public async Task DeleteTagAsync(Tag tag)
-    {
-        _context.Tags.Remove(tag);
-        await _context.SaveChangesAsync();
-    }
+	public async Task<int> GetTotalCountAsync(IQueryable<Course> query)
+	{
+		return await query.CountAsync();
+	}
+
+	public async Task DeleteTagAsync(Tag tag)
+	{
+		_context.Tags.Remove(tag);
+		await _context.SaveChangesAsync();
+	}
+
+	public async Task<List<Course>> GetForReindexAsync(int skip, int take, CancellationToken ct)
+	{
+		return await _context.Courses
+			.Where(c => !c.IsDeleted)
+			.OrderBy(c => c.CreatedAt)
+			.Skip(skip)
+			.Take(take)
+			.ToListAsync(ct);
+	}
 }
