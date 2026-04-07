@@ -10,9 +10,9 @@ public static class CorsExtensions
 	{
 		// Читаем origins из конфига — не хардкодим в коде
 		var allowedOrigins = configuration
-			                     .GetSection("Cors:AllowedOrigins")
-			                     .Get<string[]>()
-		                     ?? [];
+								 .GetSection("Cors:AllowedOrigins")
+								 .Get<string[]>()
+							 ?? [];
 
 		services.AddCors(options =>
 		{
