@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using VoxFox.Enums;
 using VoxFox.Extensions;
 using VoxFox.Interfaces.Course;
+using VoxFox.Interfaces;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Requests;
 using VoxFox.Models.Responses;
@@ -95,16 +96,16 @@ namespace VoxFox.Controllers
         {
             try
             {
-	            var userId = User.GetUserId();
-	            if (userId == null)
-		            return Unauthorized();
+                var userId = User.GetUserId();
+                if (userId == null)
+                    return Unauthorized();
                 var course = await _courseService.CreateCourseAsync(createCourseDto, userId.Value);
                 return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, course);
             }
             catch (System.Exception ex)
             {
-	            _logger.LogError(ex, "Ошибка при создании курса");
-	            return BadRequest(new { error = ex.Message });
+                _logger.LogError(ex, "Ошибка при создании курса");
+                return BadRequest(new { error = ex.Message });
             }
         }
 
@@ -137,9 +138,9 @@ namespace VoxFox.Controllers
             [FromRoute] Guid id
         )
         {
-	        var userId = User.GetUserId();
-	        if (userId == null)
-		        return Unauthorized();
+            var userId = User.GetUserId();
+            if (userId == null)
+                return Unauthorized();
             var resultDeleted = await _courseService.DeleteCourseAsync(id, userId.Value);
             if (!resultDeleted)
                 return NotFound($"Не удалось удалить курс по id: {id}");
@@ -156,13 +157,13 @@ namespace VoxFox.Controllers
             [FromBody] UpdateCourseDto updateCourseDto
         )
         {
-	        var userId = User.GetUserId();
-	        if (userId == null)
-		        return Unauthorized();
+            var userId = User.GetUserId();
+            if (userId == null)
+                return Unauthorized();
             var result = await _courseService.UpdateCourseAsync(id, updateCourseDto, userId.Value);
 
             if (!result.Success)
-	            return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+                return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
 
             return Ok(result.Data);
         }
@@ -195,15 +196,15 @@ namespace VoxFox.Controllers
         [Authorize(Roles = "Teacher,Admin")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IList<CourseDto>))]
         public async Task<ActionResult<IList<CourseDto>>> GetMyCourses(
-	        )
+            )
         {
-	        var userId = User.GetUserId();
-	        var result = await _courseService.GetMyCoursesAsync(userId.Value);
+            var userId = User.GetUserId();
+            var result = await _courseService.GetMyCoursesAsync(userId.Value);
 
-	        if (!result.Success)
-		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+            if (!result.Success)
+                return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
 
-	        return Ok(result.Data);
+            return Ok(result.Data);
         }
 
         [HttpPut("{id}/moderate")]
@@ -213,12 +214,12 @@ namespace VoxFox.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ModerateCourse([FromRoute] Guid id)
         {
-	        var result = await _courseService.ModeratorCourseAsync(id);
+            var result = await _courseService.ModeratorCourseAsync(id);
 
-	        if (!result.Success)
-		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+            if (!result.Success)
+                return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
 
-	        return NoContent();
+            return NoContent();
         }
 
         [HttpPut("{id}/approve")]
@@ -228,12 +229,12 @@ namespace VoxFox.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ApproveCourse([FromRoute] Guid id)
         {
-	        var result = await _courseService.ApproveCourseAsync(id);
+            var result = await _courseService.ApproveCourseAsync(id);
 
-	        if (!result.Success)
-		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+            if (!result.Success)
+                return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
 
-	        return NoContent();
+            return NoContent();
         }
 
         [HttpPut("{id}/reject")]
@@ -242,15 +243,15 @@ namespace VoxFox.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> RejectCourse(
-	        [FromRoute] Guid id,
-	        [FromBody] RejectCourseRequest request)
+            [FromRoute] Guid id,
+            [FromBody] RejectCourseRequest request)
         {
-	        var result = await _courseService.RejectCourseAsync(id, request.Reason);
+            var result = await _courseService.RejectCourseAsync(id, request.Reason);
 
-	        if (!result.Success)
-		        return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+            if (!result.Success)
+                return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
 
-	        return NoContent();
+            return NoContent();
         }
 
 

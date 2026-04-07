@@ -2,7 +2,7 @@ using VoxFox.Models.DTOs;
 using VoxFox.Models.Requests;
 using VoxFox.Models.Responses;
 
-namespace VoxFox.Interfaces.Course;
+namespace VoxFox.Interfaces;
 
 public interface ICourseService
 {

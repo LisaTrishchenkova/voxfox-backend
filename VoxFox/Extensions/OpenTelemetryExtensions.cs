@@ -21,6 +21,7 @@ public static class OpenTelemetryExtensions
 					.AddAspNetCoreInstrumentation()
 					.AddNpgsqlInstrumentation()
 					.AddPrometheusExporter();
+				// НЕ добавляйте AddOtlpExporter здесь!
 			});
 
 		return services;
@@ -35,6 +36,10 @@ public static class OpenTelemetryExtensions
 		var environment = GetEnvironment(configuration);
 		var tempoEndpoint = GetTempoEndpoint(configuration);
 		var serviceVersion = GetServiceVersion();
+
+		Console.WriteLine($"=== OpenTelemetry Tracing Init ===");
+		Console.WriteLine($"Tempo Endpoint: {tempoEndpoint}");
+		Console.WriteLine($"Environment: {environment}");
 
 		services.AddOpenTelemetry()
 			.ConfigureResource(resource => resource
@@ -51,22 +56,20 @@ public static class OpenTelemetryExtensions
 
 				if (string.IsNullOrEmpty(tempoEndpoint))
 				{
+					Console.WriteLine("No Tempo endpoint - using ConsoleExporter only");
 					tracing.AddConsoleExporter();
 				}
-
-				Console.WriteLine($"Проврека tempoEndpoint: ${tempoEndpoint}");
-
-				if (!string.IsNullOrEmpty(tempoEndpoint))
+				else
 				{
-					// Всегда добавляем ConsoleExporter для отладки (можно убрать позже)
-					tracing.AddConsoleExporter();
-
+					Console.WriteLine($"Tempo endpoint found - configuring OTLP exporter to {tempoEndpoint}");
+					// Только OTLP экспортер, без ConsoleExporter
 					tracing.AddOtlpExporter(options =>
 					{
 						options.Endpoint = new Uri(tempoEndpoint);
 						options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
 						options.TimeoutMilliseconds = 5000;
 					});
+					Console.WriteLine("OTLP Exporter configured successfully");
 				}
 			});
 
