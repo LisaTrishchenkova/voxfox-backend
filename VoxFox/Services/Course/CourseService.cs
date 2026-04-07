@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
-using VoxFox.Interfaces.Course;
+using VoxFox.Interfaces;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 using VoxFox.Models.Requests;
 using VoxFox.Models.Responses;
 
-namespace VoxFox.Services.Course;
+namespace VoxFox.Services;
 
 public class CourseService : ICourseService
 {
