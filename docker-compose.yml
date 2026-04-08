@@ -62,7 +62,6 @@
   # Добавляем Tempo
   tempo:
     image: grafana/tempo:latest
-    pull_policy: if_not_present
     container_name: tempo
     command:
       - "-config.file=/etc/tempo.yaml"

@@ -3,26 +3,14 @@ export default {
   rules: {
     "subject-case": [0],
     "header-max-length": [2, "always", 200],
-    "type-enum": [
-      2,
-      "always",
-      [
-        "feat",
-        "fix",
-        "docs",
-        "style",
-        "refactor",
-        "perf",
-        "test",
-        "chore",
-        "ci",
-        "build",
-        "revert",
-      ],
-    ],
   },
   ignores: [
+    (message) => /^Merge/.test(message),
     (message) => /^Merge pull request/.test(message),
-    (message) => message.includes("squash"),
+    (message) => /^Dev \(#\d+\)/.test(message),
+    (message) => /^Test \(#\d+\)/.test(message),
+    (message) => /^Staging \(#\d+\)/.test(message),
+    (message) => /^Update \.gitignore/.test(message),
+    (message) => /^chore:/.test(message),
   ],
 };
