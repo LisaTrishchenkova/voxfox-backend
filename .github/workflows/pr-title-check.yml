@@ -1,0 +1,33 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title is readable
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # Простая проверка: заголовок не слишком короткий и не пустой
+          if [ ${#PR_TITLE} -lt 10 ]; then
+            echo "❌ PR title too short (minimum 10 characters)"
+            echo "Current: '$PR_TITLE'"
+            echo ""
+            echo "✅ Write a descriptive title:"
+            echo "  - Fix authentication bug"
+            echo "  - Add payment processing endpoint"
+            echo "  - Update database schema"
+            exit 1
+          fi
+
+          if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style): ]]; then
+            echo "⚠️  Note: PR title uses conventional format (optional)"
+            echo "   Human-readable format is preferred:"
+            echo "   'Fix login bug' instead of 'fix: resolve login bug'"
+          fi
+
+          echo "✅ PR title is readable: $PR_TITLE"
