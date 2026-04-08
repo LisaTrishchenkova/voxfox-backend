@@ -55,7 +55,7 @@ public class LessonService : ILessonService
 
 			return ServiceResult<bool>.Ok(true, "Урок успешно удален");
 		}
-		catch (Exception ex)
+		catch (System.Exception ex)
 		{
 			return ServiceResult<bool>.Fail(
 				$"Ошибка при удалении урока: {ex.Message}",
@@ -77,7 +77,7 @@ public class LessonService : ILessonService
 
 			return ServiceResult<LessonDto?>.Ok(MapToDo(lesson));
 		}
-		catch (Exception ex)
+		catch (System.Exception ex)
 		{
 			return ServiceResult<LessonDto?>.Fail(
 				$"Ошибка при получении урока: {ex.Message}",
@@ -105,7 +105,7 @@ public class LessonService : ILessonService
 
 			return ServiceResult<LessonDto>.Ok(MapToDo(updatedLesson), "Урок успешно обновлен");
 		}
-		catch (Exception ex)
+		catch (System.Exception ex)
 		{
 			return ServiceResult<LessonDto>.Fail(
 				$"Ошибка при обновлении урока: {ex.Message}",

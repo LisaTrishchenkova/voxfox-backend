@@ -1,10 +1,11 @@
 using VoxFox.Extensions;
+using VoxFox.Services;
 
 namespace VoxFox;
 
 public sealed class Program
 {
-	public static void Main(string[] args)
+	public static async Task Main(string[] args)
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
@@ -20,10 +21,38 @@ public sealed class Program
 			.AddDatabase(builder.Configuration)
 			.AddApplicationServices()
 			.AddMetrics()
-			.AddOpenTelemetryMetrics();
+			.AddOpenTelemetryMetrics()
+			.AddOpenTelemetryTracing(builder.Configuration)
+			.AddElasticsearch(builder.Configuration);
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
+
+		// ── ИНИЦИАЛИЗАЦИЯ Elasticsearch ПРИ ЗАПУСКЕ ───────────────────────────
+		using (var scope = app.Services.CreateScope())
+		{
+			var elasticsearchService = scope.ServiceProvider.GetRequiredService<CourseSearchService>();
+			var loggerLocal = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+			try
+			{
+				loggerLocal.LogInformation("Initializing Elasticsearch index...");
+
+				// ✅ Прямой вызов метода из CourseSearchService
+				await elasticsearchService.EnsureIndexExistsAsync();
+
+				// Делаем реиндекс данных из PostgreSQL
+				loggerLocal.LogInformation("Starting reindex from PostgreSQL to Elasticsearch...");
+				await elasticsearchService.ReindexAllAsync();
+
+				loggerLocal.LogInformation("Elasticsearch initialization completed!");
+			}
+			catch (System.Exception ex)
+			{
+				loggerLocal.LogError(ex, "Failed to initialize Elasticsearch");
+				// Не останавливаем приложение, просто логируем ошибку
+			}
+		}
 
 		// ── Middleware pipeline (порядок важен!) ──────────────────────────────
 		app.UseGlobalExceptionHandler(app.Environment);
@@ -40,6 +69,14 @@ public sealed class Program
 		app.MapSystemEndpoints();
 		app.MapControllers();
 
+		app.MapGet("/debug/otel-status", () => new
+		{
+			tempoEndpoint = Environment.GetEnvironmentVariable("TEMPO_ENDPOINT"),
+			environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+			hasOtel = AppDomain.CurrentDomain.GetAssemblies()
+				.Any(a => a.FullName?.Contains("OpenTelemetry") == true)
+		});
+
 		if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 		{
 			app.UseApiDocumentation();
@@ -53,6 +90,6 @@ public sealed class Program
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();
 		logger.LogInformation("Starting application - API port: {ApiPort}", apiPort);
 
-		app.Run();
+		await app.RunAsync();
 	}
 }

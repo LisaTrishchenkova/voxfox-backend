@@ -20,7 +20,7 @@ namespace VoxFox.Models.Entities
         public Guid? CategoryId { get; set; }
 
         public Guid? AuthorId { get; set; }
-        public Author? Author { get; set; }
+        public User? Author { get; set; }
         public DateTime? PublishedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
