@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Models.DTOs;
@@ -6,7 +7,7 @@ using VoxFox.Models.Entities;
 namespace VoxFox.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/Categories")]
     public class CategoryController : ControllerBase
     {
         private readonly ApplicationContext _context;
@@ -31,10 +32,11 @@ namespace VoxFox.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto createCategoryDto)
         {
-            var existingCategory = await _context.Categories
-                .AnyAsync(c => string.Equals(c.Name, createCategoryDto.Name, StringComparison.OrdinalIgnoreCase));
+	        var existingCategory = _context.Categories
+		        .Any(c => EF.Functions.ILike(c.Name, createCategoryDto.Name));
 
             if (existingCategory)
             {
@@ -59,6 +61,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<CategoryDto>> UpdateCategory(Guid id, CreateCategoryDto updateCategoryDto)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -89,6 +92,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCategory(Guid id)
         {
             var category = await _context.Categories.FindAsync(id);

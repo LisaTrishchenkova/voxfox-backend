@@ -1,15 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
+using VoxFox.Extensions;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Models.DTOs;
 
 namespace VoxFox.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/Lessons")]
     public class LessonController(ILessonService lessonService) : ControllerBase
     {
         [HttpPost]
+        [Authorize(Roles = "Teacher,Admin")]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(LessonDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -33,7 +36,7 @@ namespace VoxFox.Controllers
                     new { id = result.Data!.Id },
                     result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 var message = ex.Message;
                 return StatusCode(500, message);
@@ -41,6 +44,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LessonDto))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -58,13 +62,14 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Teacher,Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -80,7 +85,7 @@ namespace VoxFox.Controllers
 
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
@@ -88,6 +93,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Teacher,Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -108,7 +114,7 @@ namespace VoxFox.Controllers
 
                 return Ok(result.Data);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }

@@ -19,7 +19,7 @@ namespace VoxFox.Services
 		public async Task StartAsync(CancellationToken cancellationToken)
 		{
 			var retryPolicy = Policy
-				.Handle<Exception>(ex => ex is DbUpdateException || ex is TimeoutException || ex is NpgsqlException)
+				.Handle<System.Exception>(ex => ex is DbUpdateException || ex is TimeoutException || ex is NpgsqlException)
 				.WaitAndRetryAsync(
 					retryCount: 3,
 					sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(1),

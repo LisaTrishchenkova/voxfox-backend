@@ -1,33 +1,55 @@
+using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
-using VoxFox.Interfaces.Course;
+using VoxFox.Interfaces;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 using VoxFox.Models.Requests;
 using VoxFox.Models.Responses;
 
-namespace VoxFox.Services.Course;
+namespace VoxFox.Services;
 
 public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
     private readonly ILogger<CourseService> _logger;
+    private readonly ApplicationContext _context;
 
-    public CourseService(ICourseRepository courseRepository, ILogger<CourseService> logger)
+    public CourseService(ApplicationContext context, ICourseRepository courseRepository, ILogger<CourseService> logger)
     {
+	    _context = context;
         _courseRepository = courseRepository;
         _logger = logger;
     }
 
-    public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto)
+    public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto, Guid authorId)
     {
+	    if (createCourseDto.CategoryId.HasValue)
+	    {
+		    var categoryExists = await _context.Categories
+			    .AnyAsync(c => c.Id == createCourseDto.CategoryId.Value);
+		    if (!categoryExists)
+		    {
+			    throw new System.Exception($"Категория с Id: {createCourseDto.CategoryId} не найдена");
+		    }
+	    }
+	    var author = await _context.Users.FirstOrDefaultAsync(u => u.Id == authorId);
+	    if (author == null)
+		    throw new System.Exception("Пользователь не найден");
         var course = new Models.Entities.Course
         {
             Status = CourseStatus.Draft,
             Title = createCourseDto.Title,
             Description = createCourseDto.Description,
+            FullDescription = createCourseDto.FullDescription,
+            CoverImageUrl = createCourseDto.CoverImageUrl,
+            Price = createCourseDto.Price,
+            Level = createCourseDto.Level,
+            CertificateEnabled = createCourseDto.CertificateEnabled,
             CategoryId = createCourseDto.CategoryId,
-            AuthorId = createCourseDto.AuthorId,
-            PublishedAt = DateTime.UtcNow,
+            AuthorId = authorId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            PublishedAt = null,
             Tags = createCourseDto.Tags.Select(tagDto => new Tag
             {
                 Name = tagDto.Name
@@ -37,16 +59,19 @@ public class CourseService : ICourseService
         var createdCourse = await _courseRepository.AddAsync(course);
         if (createdCourse == null)
         {
-            throw new Exception("Не удалось добавить курс");
+            throw new System.Exception("Не удалось добавить курс");
         }
         return MapToDo(createdCourse);
     }
 
-    public async Task<bool> DeleteCourseAsync(Guid id)
+    public async Task<bool> DeleteCourseAsync(Guid id, Guid userId)
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
             return false;
+
+        if (course.AuthorId != userId)
+	        return false;
 
         var isSuccess = await _courseRepository.DeleteSoftAsync(course);
         return isSuccess;
@@ -56,7 +81,7 @@ public class CourseService : ICourseService
     {
         var courses = await _courseRepository.GetAllAsync();
         if (courses == null)
-            throw new Exception("Не удалось получить список курсов");
+            throw new System.Exception("Не удалось получить список курсов");
 
         var coursesDto = courses
             .Select(MapToDo)
@@ -76,9 +101,9 @@ public class CourseService : ICourseService
         return courseDto;
     }
 
-    public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto)
+    public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto, Guid userId)
     {
-            
+
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
         {
@@ -87,9 +112,31 @@ public class CourseService : ICourseService
                 StatusCodes.Status404NotFound
             );
         }
-
+        if (course.AuthorId != userId)
+	        return ServiceResult<CourseDto>.Fail("Нет доступа к этому курсу", StatusCodes.Status403Forbidden);
+        if (updateCourseDto.CategoryId.HasValue)
+        {
+	        var categoryExists = await _context.Categories
+		        .AnyAsync(c => c.Id == updateCourseDto.CategoryId.Value);
+	        if (!categoryExists)
+	        {
+		        return ServiceResult<CourseDto>.Fail(
+			        $"Категория с Id: {updateCourseDto.CategoryId} не найдена",
+			        StatusCodes.Status404NotFound
+		        );
+	        }
+        }
         course.Title = updateCourseDto.Title ?? course.Title;
         course.Description = updateCourseDto.Description ?? course.Description;
+        course.Title = updateCourseDto.Title ?? course.Title;
+        course.Description = updateCourseDto.Description ?? course.Description;
+        course.FullDescription = updateCourseDto.FullDescription ?? course.FullDescription;
+        course.CoverImageUrl = updateCourseDto.CoverImageUrl ?? course.CoverImageUrl;
+        course.Price = updateCourseDto.Price ?? course.Price;
+        course.Level = updateCourseDto.Level ?? course.Level;
+        course.CertificateEnabled = updateCourseDto.CertificateEnabled ?? course.CertificateEnabled;
+        course.CategoryId = updateCourseDto.CategoryId ?? course.CategoryId;
+        course.UpdatedAt = DateTime.UtcNow;
 
         // Обновляем теги
         if (course.Tags != null)
@@ -126,9 +173,9 @@ public class CourseService : ICourseService
         }
 
         var updateCourse = await _courseRepository.UpdateAsync(course);
-        
+
         return ServiceResult<CourseDto>.Ok(MapToDo(updateCourse));
-        
+
     }
 
     public async Task<ServiceResult<IList<SectionDto>>> GetSectionsByCourseIdAsync(Guid courseId)
@@ -149,7 +196,7 @@ public class CourseService : ICourseService
             var sectionsDto = sections.Select(MapToDo).ToList();
             return ServiceResult<IList<SectionDto>>.Ok(sectionsDto);
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             return ServiceResult<IList<SectionDto>>.Fail(
                 $"Ошибка при получении разделов курса: {ex.Message}",
@@ -165,18 +212,27 @@ public class CourseService : ICourseService
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
+            FullDescription = course.FullDescription,
+            CoverImageUrl = course.CoverImageUrl,
+            Price = course.Price,
+            Level = course.Level,
+            CertificateEnabled = course.CertificateEnabled,
+            EnrollmentCount = course.EnrollmentCount,
+            Rating = course.Rating,
+            DurationMinutes = course.DurationMinutes,
             Status = course.Status,
             CategoryId = course.CategoryId,
             Tags = course.Tags?.Select(t => new TagDto
             {
                 Name = t.Name
             }).ToList(),
-            Author = new AuthorDto 
+            Author = new AuthorDto
             {
                 Id = course.Author!.Id,
                 Name = course.Author.Name
             },
-            PublishedAt = course.PublishedAt
+            PublishedAt = course.PublishedAt,
+            CreatedAt = course.CreatedAt
         };
 
         return courses;
@@ -234,7 +290,7 @@ public class CourseService : ICourseService
                 PageSize = request.PageSize
             };
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             _logger.LogError(ex, "Ошибка при поиске курсов: {SearchTerm}", request.SearchTerm);
             throw;
@@ -269,7 +325,7 @@ public class CourseService : ICourseService
     {
         return sortBy switch
         {
-            // CoursesSortBy.Price => query.OrderBy(c => c.Price),
+            CoursesSortBy.Price => query.OrderBy(c => c.Price),
             CoursesSortBy.Title => query.OrderBy(c => c.Title),
             CoursesSortBy.Date => query.OrderBy(c => c.PublishedAt),
             CoursesSortBy.DateDesc => query.OrderByDescending(c => c.PublishedAt),
@@ -325,5 +381,91 @@ public class CourseService : ICourseService
         await _courseRepository.UpdateAsync(course);
 
         return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<IList<CourseDto>>> GetMyCoursesAsync(Guid userId)
+    {
+	    var course = await _courseRepository.GetByAuthorIdAsync(userId);
+
+	    var resualt = course.Select(MapToDo).ToList();
+	    return ServiceResult<IList<CourseDto>>.Ok(resualt);
+    }
+
+    public async Task<ServiceResult<bool>> ModeratorCourseAsync(Guid id)
+    {
+	    var course = await _courseRepository.GetByIdAsync(id);
+	    if (course == null)
+	    {
+		    return ServiceResult<bool>.Fail(
+			    $"Курс с id: {id} не найден",
+			    StatusCodes.Status404NotFound);
+	    }
+
+	    if (course.Status != CourseStatus.Draft && course.Status != CourseStatus.RejectedByModerator)
+	    {
+		    return ServiceResult<bool>.Fail(
+			    "На модерацию можно отправить только курс в статусе Draft или RejectedByModerator");
+	    }
+
+	    if (string.IsNullOrWhiteSpace(course.Title) ||
+	        string.IsNullOrWhiteSpace(course.Description))
+	    {
+		    return ServiceResult<bool>.Fail(
+			    "Курс должен иметь название и описание перед отправкой на модерацию"
+		    );
+	    }
+
+	    course.Status = CourseStatus.UnderReview;
+	    course.UpdatedAt = DateTime.UtcNow;
+	    await _courseRepository.UpdateAsync(course);
+
+	    return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<bool>> ApproveCourseAsync(Guid id)
+    {
+	    var course = await _courseRepository.GetByIdAsync(id);
+	    if (course == null)
+	    {
+		    return ServiceResult<bool>.Fail(
+			    $"Курс с id: {id} не найден",
+			    StatusCodes.Status404NotFound
+		    );
+	    }
+
+	    if (course.Status != CourseStatus.UnderReview)
+	    {
+		    return ServiceResult<bool>.Fail(
+			    "Одобрить можно только курс в статусе UnderReview"
+		    );
+	    }
+
+	    course.Status = CourseStatus.Published;
+	    course.PublishedAt = DateTime.UtcNow;
+	    course.UpdatedAt = DateTime.UtcNow;
+	    await _courseRepository.UpdateAsync(course);
+
+	    return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<bool>> RejectCourseAsync(Guid id, string? reason)
+    {
+	    var course = await _courseRepository.GetByIdAsync(id);
+	    if (course == null)
+		    return ServiceResult<bool>.Fail(
+			    $"Курс с id: {id} не найден",
+			    StatusCodes.Status404NotFound
+		    );
+
+	    if (course.Status != CourseStatus.UnderReview)
+		    return ServiceResult<bool>.Fail(
+			    "Отклонить можно только курс в статусе UnderReview"
+		    );
+
+	    course.Status = CourseStatus.RejectedByModerator;
+	    course.UpdatedAt = DateTime.UtcNow;
+	    await _courseRepository.UpdateAsync(course);
+
+	    return ServiceResult<bool>.Ok(true);
     }
 }

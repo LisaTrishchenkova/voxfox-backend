@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
+using VoxFox.Models.DTOs.Tasks;
 
 namespace VoxFox.Models.Entities
 {
@@ -11,7 +12,10 @@ namespace VoxFox.Models.Entities
         public DbSet<Tag> Tags { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Category> Categories { get; set; }
-        public DbSet<Author> Authors { get; set; }
+        // public DbSet<Author> Authors { get; set; }
+        public DbSet<Enrollment> Enrollments { get; set; }
+        public DbSet<TaskEntity> Tasks { get; set; }
+        public DbSet<TaskSubmission> TaskSubmissions { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -44,10 +48,11 @@ namespace VoxFox.Models.Entities
                 .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Course>()
-               .HasOne(c => c.Author)
-               .WithMany(a => a.Courses)
-               .HasForeignKey(c => c.AuthorId)
-               .OnDelete(DeleteBehavior.Restrict);
+	            .HasOne(c => c.Author)
+	            .WithMany(u => u.Courses)  
+	            .HasForeignKey(c => c.AuthorId)
+	            .OnDelete(DeleteBehavior.Restrict);
+
 
             modelBuilder.Entity<User>(entity =>
             {
@@ -63,6 +68,9 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.Password)
                     .IsRequired()
                     .HasMaxLength(100);
+                entity.Property(e => e.Role)
+	                .HasConversion<string>()
+	                .HasDefaultValue(UserRole.Student);
             });
             modelBuilder.Entity<Course>(entity =>
             {
@@ -72,7 +80,27 @@ namespace VoxFox.Models.Entities
                     .HasMaxLength(200);
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
-
+                entity.Property(e => e.FullDescription)
+	                .IsRequired(false);
+                entity.Property(e => e.CoverImageUrl)
+	                .IsRequired(false)
+	                .HasMaxLength(500);
+                entity.Property(e => e.Price)
+	                .IsRequired()
+	                .HasColumnType("numeric(10,2)")
+	                .HasDefaultValue(0);
+                entity.Property(e => e.Level)
+	                .HasConversion<string>()
+	                .HasDefaultValue(CourseLevel.Beginner);
+                entity.Property(e => e.CertificateEnabled)
+	                .HasDefaultValue(false);
+                entity.Property(e => e.EnrollmentCount)
+	                .HasDefaultValue(0);
+                entity.Property(e => e.Rating)
+	                .HasColumnType("numeric(3,2)")
+	                .HasDefaultValue(0);
+                entity.Property(e => e.DurationMinutes)
+	                .HasDefaultValue(0);
                 entity.Property(e => e.Id)
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
@@ -83,11 +111,17 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.CategoryId);
                 entity.Property(e => e.AuthorId)
                     .IsRequired(false);
-
                 entity.Property(e => e.PublishedAt)
-                    .IsRequired()
-                    .HasColumnType("timestamp with time zone")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+	                .IsRequired(false)
+	                .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.CreatedAt)
+	                .IsRequired()
+	                .HasColumnType("timestamp with time zone")
+	                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt)
+	                .IsRequired()
+	                .HasColumnType("timestamp with time zone")
+	                .HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.HasQueryFilter(c => !c.IsDeleted);
             }
             );
@@ -139,18 +173,160 @@ namespace VoxFox.Models.Entities
 
             });
 
-            modelBuilder.Entity<Author>(entity =>
+           //  modelBuilder.Entity<Author>(entity =>
+           // {
+           //     entity.HasKey(e => e.Id);
+           //
+           //     entity.Property(e => e.Name)
+           //              .IsRequired()
+           //             .HasMaxLength(200);
+           //
+           //     entity.Property(e => e.Id)
+           //             .HasColumnType("uuid")
+           //             .HasDefaultValueSql("gen_random_uuid()");
+           // });
+
+           modelBuilder.Entity<Enrollment>(entity =>
            {
-               entity.HasKey(e => e.Id);
+	           entity.HasKey(e => e.Id);
 
-               entity.Property(e => e.Name)
-                        .IsRequired()
-                       .HasMaxLength(200);
+	           entity.Property(e => e.Id)
+		           .HasColumnType("uuid")
+		           .HasDefaultValueSql("gen_random_uuid()");
 
-               entity.Property(e => e.Id)
-                       .HasColumnType("uuid")
-                       .HasDefaultValueSql("gen_random_uuid()");
+	           entity.Property(e => e.Status)
+		           .HasConversion<string>()
+		           .HasDefaultValue(EnrollmentStatus.Active);
+
+	           entity.Property(e => e.EnrolledAt)
+		           .IsRequired()
+		           .HasColumnType("timestamp with time zone")
+		           .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	           entity.Property(e => e.CompletedAt)
+		           .IsRequired(false)
+		           .HasColumnType("timestamp with time zone");
+
+	           entity.Property(e => e.ProgressPercent)
+		           .HasDefaultValue(0);
+
+	           // уникальный индекс — один пользователь не может записаться дважды
+	           entity.HasIndex(e => new { e.UserId, e.CourseId })
+		           .IsUnique();
+
+	           entity.HasOne(e => e.User)
+		           .WithMany()
+		           .HasForeignKey(e => e.UserId)
+		           .OnDelete(DeleteBehavior.Restrict);
+
+	           entity.HasOne(e => e.Course)
+		           .WithMany()
+		           .HasForeignKey(e => e.CourseId)
+		           .OnDelete(DeleteBehavior.Restrict);
            });
+
+           modelBuilder.Entity<TaskEntity>(entity =>
+{
+    entity.HasKey(e => e.Id);
+
+    entity.Property(e => e.Id)
+        .HasColumnType("uuid")
+        .HasDefaultValueSql("gen_random_uuid()");
+
+    entity.Property(e => e.Type)
+        .HasConversion<string>()
+        .IsRequired();
+
+    entity.Property(e => e.Question)
+        .IsRequired()
+        .HasMaxLength(1000);
+
+    entity.Property(e => e.Options)
+        .HasColumnType("jsonb")
+        .IsRequired(false);
+
+    entity.Property(e => e.CorrectIndex)
+        .IsRequired(false);
+
+    entity.Property(e => e.CorrectIndexes)
+        .HasColumnType("jsonb")
+        .IsRequired(false);
+
+    entity.Property(e => e.CorrectAnswer)
+        .IsRequired(false)
+        .HasMaxLength(1000);
+
+    entity.Property(e => e.Explanation)
+        .IsRequired(false)
+        .HasMaxLength(2000);
+
+    entity.Property(e => e.Hints)
+        .HasColumnType("jsonb")
+        .IsRequired(false);
+
+    entity.Property(e => e.Points)
+        .HasDefaultValue(1);
+
+    entity.Property(e => e.OrderIndex)
+        .IsRequired();
+
+    entity.Property(e => e.IsRequired)
+        .HasDefaultValue(true);
+
+    entity.Property(e => e.CreatedAt)
+        .IsRequired()
+        .HasColumnType("timestamp with time zone")
+        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+    entity.HasOne(e => e.Lesson)
+        .WithMany()
+        .HasForeignKey(e => e.LessonId)
+        .OnDelete(DeleteBehavior.Cascade);
+});
+
+modelBuilder.Entity<TaskSubmission>(entity =>
+{
+    entity.HasKey(e => e.Id);
+
+    entity.Property(e => e.Id)
+        .HasColumnType("uuid")
+        .HasDefaultValueSql("gen_random_uuid()");
+
+    entity.Property(e => e.AnswerIndex)
+        .IsRequired(false);
+
+    entity.Property(e => e.AnswerIndexes)
+        .HasColumnType("jsonb")
+        .IsRequired(false);
+
+    entity.Property(e => e.AnswerText)
+        .IsRequired(false)
+        .HasMaxLength(1000);
+
+    entity.Property(e => e.IsCorrect)
+        .IsRequired();
+
+    entity.Property(e => e.Score)
+        .HasDefaultValue(0);
+
+    entity.Property(e => e.AttemptNumber)
+        .HasDefaultValue(1);
+
+    entity.Property(e => e.SubmittedAt)
+        .IsRequired()
+        .HasColumnType("timestamp with time zone")
+        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+    entity.HasOne(e => e.Task)
+        .WithMany(t => t.Submissions)
+        .HasForeignKey(e => e.TaskId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+    entity.HasOne(e => e.User)
+        .WithMany()
+        .HasForeignKey(e => e.UserId)
+        .OnDelete(DeleteBehavior.Restrict);
+});
 
             base.OnModelCreating(modelBuilder);
         }

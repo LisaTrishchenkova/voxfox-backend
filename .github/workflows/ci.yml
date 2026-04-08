@@ -21,7 +21,6 @@ env:
   COVERAGE_THRESHOLD: 80
 
 jobs:
-  # Job 1: Быстрая проверка кода (линтинг, уязвимости)
   lint:
     timeout-minutes: 10
     runs-on: ubuntu-24.04
@@ -44,10 +43,8 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Run linter (dotnet format)
-        run: |
-          dotnet tool install -g dotnet-format || true
-          dotnet format --verify-no-changes --severity warn || echo "⚠️ Linting issues found"
+      - name: Run linter
+        run: dotnet format --verify-no-changes --severity warn || echo "⚠️ Linting issues found"
 
       - name: Check for vulnerable packages
         run: |
@@ -58,11 +55,13 @@ jobs:
           echo "### Deprecated packages:" >> $GITHUB_STEP_SUMMARY
           dotnet list package --deprecated --include-transitive 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "⚠️ No deprecated packages found"
 
-  # Job 2: Сборка и тесты
   build-and-test:
     timeout-minutes: 15
     runs-on: ubuntu-24.04
     needs: [lint]
+    outputs:
+      coverage: ${{ steps.coverage.outputs.coverage }}
+      coverage_status: ${{ steps.coverage.outputs.coverage_status }}
     steps:
       - uses: actions/checkout@v6
 
@@ -93,42 +92,50 @@ jobs:
             --settings coverlet.runsettings \
             --logger "trx"
 
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-${{ github.sha }}
-          path: ./TestResults
-          retention-days: 30
+      # - name: Upload coverage reports
+      #   if: always()
+      #   uses: actions/upload-artifact@v7
+      #   with:
+      #     name: coverage-${{ github.sha }}
+      #     path: ./TestResults
+      #     retention-days: 7
 
       - name: Check coverage threshold
+        id: coverage
         if: always()
         run: |
-          dotnet tool install -g dotnet-coverage
-          dotnet-coverage merge ./TestResults/**/*.coverage -o merged.coverage
-          COVERAGE=$(dotnet-coverage report merged.coverage --format text | grep "Total" | awk '{print $3}' | sed 's/%//')
+          COVERAGE=$(grep -oP 'line-rate="\K[^"]+' ./TestResults/**/*.xml | head -1 | awk '{printf "%.0f", $1 * 100}')
           echo "Coverage: ${COVERAGE}%"
           echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
 
-          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
-            echo "⚠️ Coverage is below ${{ env.COVERAGE_THRESHOLD }}%"
+          if [ "$COVERAGE" -lt "${{ env.COVERAGE_THRESHOLD }}" ]; then
             echo "coverage_status=warning" >> $GITHUB_OUTPUT
+            STATUS="⚠️ Below threshold"
+            # TODO: раскомментировать когда coverage достигнет ${{ env.COVERAGE_THRESHOLD }}%
+            # exit 1
           else
-            echo "✅ Coverage meets threshold"
             echo "coverage_status=passed" >> $GITHUB_OUTPUT
+            STATUS="✅ Passed"
           fi
+
+          # Summary
+          echo "## 🧪 Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Coverage | **${COVERAGE}%** |" >> $GITHUB_STEP_SUMMARY
+          echo "| Threshold | ${{ env.COVERAGE_THRESHOLD }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${STATUS} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Publish artifact
         run: dotnet publish VoxFox/VoxFox.csproj -c ${{ env.CONFIGURATION }} -o ./publish
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-${{ github.sha }}
-          path: ./publish
-          retention-days: 30
+      # - name: Upload build artifact
+      #   uses: actions/upload-artifact@v7
+      #   with:
+      #     name: build-${{ github.sha }}
+      #     path: ./publish
+      #     retention-days: 7
 
-  # Job 3: Комментарий в PR
   comment:
     runs-on: ubuntu-24.04
     needs: [lint, build-and-test]
@@ -174,7 +181,6 @@ jobs:
 
             Please check the logs and fix the issues.
 
-  # Job 4: Уведомление о низком покрытии кода (опционально)
   coverage-warning:
     runs-on: ubuntu-24.04
     needs: [build-and-test]

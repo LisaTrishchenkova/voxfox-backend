@@ -1,68 +1,66 @@
-using Microsoft.AspNetCore.Diagnostics;
-using Prometheus;
 using VoxFox.Extensions;
+using VoxFox.Services;
 
 namespace VoxFox;
 
 public sealed class Program
 {
-	public static void Main(string[] args)
+	public static async Task Main(string[] args)
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		var httpPort = builder.Configuration["Ports:Http"] ?? "8080";
-		var metricsPort = builder.Configuration["Ports:Metrics"] ?? "9090";
+		var apiPort = builder.Configuration["Ports:Api"] ?? "8080";
+		var metricsPort = int.Parse(builder.Configuration["Ports:Metrics"] ?? "9090");
 
-		// ── Services ─────────────────────────────────────────────────────────
+		// ── Services ──────────────────────────────────────────────────────────
 		builder.Services
 			.AddCorsPolicy(builder.Configuration)
 			.AddApiControllers()
-			.AddSwaggerWithAuth()
+			.AddApiDocumentation()
 			.AddJwtAuthentication(builder.Configuration)
 			.AddDatabase(builder.Configuration)
 			.AddApplicationServices()
-			.AddMetrics();
+			.AddMetrics()
+			.AddOpenTelemetryMetrics()
+			.AddOpenTelemetryTracing(builder.Configuration)
+			.AddElasticsearch(builder.Configuration);
 
 		// ── Build ─────────────────────────────────────────────────────────────
 		var app = builder.Build();
 
-		// TODO: вынести как ниже все
-		app.UseExceptionHandler(appError =>
+		// ── ИНИЦИАЛИЗАЦИЯ Elasticsearch ПРИ ЗАПУСКЕ ───────────────────────────
+		using (var scope = app.Services.CreateScope())
 		{
-			appError.Run(async context =>
+			var elasticsearchService = scope.ServiceProvider.GetRequiredService<CourseSearchService>();
+			var loggerLocal = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+			try
 			{
-				context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-				context.Response.ContentType = "application/json";
+				loggerLocal.LogInformation("Initializing Elasticsearch index...");
 
-				var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
-				if (contextFeature != null)
-				{
-					var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-					var error = contextFeature.Error;
+				// ✅ Прямой вызов метода из CourseSearchService
+				await elasticsearchService.EnsureIndexExistsAsync();
 
-					logger.LogError(error, "Unhandled exception occurred. TraceId: {TraceId}",
-						context.TraceIdentifier);
+				// Делаем реиндекс данных из PostgreSQL
+				loggerLocal.LogInformation("Starting reindex from PostgreSQL to Elasticsearch...");
+				await elasticsearchService.ReindexAllAsync();
 
-					var response = new
-					{
-						error = "An error occurred while processing your request",
-						traceId = context.TraceIdentifier,
-
-						message = app.Environment.IsDevelopment() ? error.Message : null,
-						stackTrace = app.Environment.IsDevelopment() ? error.StackTrace : null,
-						type = app.Environment.IsDevelopment() ? error.GetType().Name : null
-					};
-
-					await context.Response.WriteAsJsonAsync(response);
-				}
-			});
-		});
-
+				loggerLocal.LogInformation("Elasticsearch initialization completed!");
+			}
+			catch (System.Exception ex)
+			{
+				loggerLocal.LogError(ex, "Failed to initialize Elasticsearch");
+				// Не останавливаем приложение, просто логируем ошибку
+			}
+		}
 
 		// ── Middleware pipeline (порядок важен!) ──────────────────────────────
+		app.UseGlobalExceptionHandler(app.Environment);
+
 		app.UseCors(CorsExtensions.PolicyName);
 		app.UseRouting();
-		app.UseHttpMetrics(options => options.ReduceStatusCodeCardinality());
+
+		app.UseOpenTelemetryPrometheusScrapingEndpoint(context => context.Connection.LocalPort == metricsPort);
 
 		app.UseAuthentication();
 		app.UseAuthorization();
@@ -70,18 +68,28 @@ public sealed class Program
 		// ── Endpoints ─────────────────────────────────────────────────────────
 		app.MapSystemEndpoints();
 		app.MapControllers();
-		app.MapMetrics().RequireHost($"*:{metricsPort}");
 
-		if (!app.Environment.IsProduction())
+		app.MapGet("/debug/otel-status", () => new
 		{
-			app.UseSwaggerWithUi();
+			tempoEndpoint = Environment.GetEnvironmentVariable("TEMPO_ENDPOINT"),
+			environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+			hasOtel = AppDomain.CurrentDomain.GetAssemblies()
+				.Any(a => a.FullName?.Contains("OpenTelemetry") == true)
+		});
+
+		if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+		{
+			app.UseApiDocumentation();
 			app.MapDebugEndpoints();
 		}
 
-		// ── Ports ─────────────────────────────────────────────────────────────
-		app.Urls.Add($"http://+:{httpPort}");
-		app.Urls.Add($"http://+:{metricsPort}");
+		app.Urls.Clear();
+		app.Urls.Add($"http://*:{apiPort}");
+		app.Urls.Add($"http://*:{metricsPort}");
 
-		app.Run();
+		var logger = app.Services.GetRequiredService<ILogger<Program>>();
+		logger.LogInformation("Starting application - API port: {ApiPort}", apiPort);
+
+		await app.RunAsync();
 	}
 }

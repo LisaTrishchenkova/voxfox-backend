@@ -36,7 +36,8 @@ public class LessonService : ILessonService
 
 		var createLesson = await _lessonRepository.AddAsync(lesson);
 
-		return ServiceResult<LessonDto>.Created(MapToDo(createLesson));
+		var result = MapToDo(createLesson);
+		return ServiceResult<LessonDto>.Created(result);
 	}
 
 	public async Task<ServiceResult<bool>> DeleteLessonAsync(Guid id)
@@ -54,7 +55,7 @@ public class LessonService : ILessonService
 
 			return ServiceResult<bool>.Ok(true, "Урок успешно удален");
 		}
-		catch (Exception ex)
+		catch (System.Exception ex)
 		{
 			return ServiceResult<bool>.Fail(
 				$"Ошибка при удалении урока: {ex.Message}",
@@ -76,7 +77,7 @@ public class LessonService : ILessonService
 
 			return ServiceResult<LessonDto?>.Ok(MapToDo(lesson));
 		}
-		catch (Exception ex)
+		catch (System.Exception ex)
 		{
 			return ServiceResult<LessonDto?>.Fail(
 				$"Ошибка при получении урока: {ex.Message}",
@@ -104,7 +105,7 @@ public class LessonService : ILessonService
 
 			return ServiceResult<LessonDto>.Ok(MapToDo(updatedLesson), "Урок успешно обновлен");
 		}
-		catch (Exception ex)
+		catch (System.Exception ex)
 		{
 			return ServiceResult<LessonDto>.Fail(
 				$"Ошибка при обновлении урока: {ex.Message}",
@@ -115,6 +116,12 @@ public class LessonService : ILessonService
 
 	private async Task<ValidationResult> ValidateLessonAsync(Guid sectionId, CreateLessonDto dto)
 	{
+		if (sectionId == Guid.Empty)
+		{
+			return ValidationResult.Fail(
+				"sectionId не может быть пустым",
+				StatusCodes.Status400BadRequest);
+		}
 		var section = await _lessonRepository.SectionExistsAsync(sectionId);
 		if (!section)
 			return ValidationResult.Fail("Section not found", 404);

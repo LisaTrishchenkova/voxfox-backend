@@ -2,9 +2,10 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Interfaces;
-using VoxFox.Interfaces.Course;
+using VoxFox.Interfaces.Enrollment;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Interfaces.Section;
+using VoxFox.Interfaces.Task;
 using VoxFox.Models.Entities;
 using VoxFox.Repositories;
 using VoxFox.Services;
@@ -22,7 +23,13 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<ISectionService, SectionService>();
 		services.AddScoped<ILessonRepository, LessonRepository>();
 		services.AddScoped<ILessonService, LessonService>();
+		services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
+		services.AddScoped<IEnrollmentService, EnrollmentService>();
+		services.AddScoped<ITaskRepository, TaskRepository>();
+		services.AddMediatR(cfg =>
+			cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 		services.AddScoped<IJwtService, JwtService>();
+		services.AddScoped<CourseSearchService>();
 
 		return services;
 	}
@@ -32,8 +39,8 @@ public static class ServiceCollectionExtensions
 		IConfiguration configuration)
 	{
 		var connectionString = configuration.GetConnectionString("DefaultConnection")
-		                       ?? throw new InvalidOperationException(
-			                       "Connection string 'DefaultConnection' is not configured.");
+							   ?? throw new InvalidOperationException(
+								   "Connection string 'DefaultConnection' is not configured.");
 
 		services.AddDbContext<ApplicationContext>(options =>
 			options.UseNpgsql(

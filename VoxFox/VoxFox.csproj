@@ -12,6 +12,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Elastic.Clients.Elasticsearch" Version="9.3.4"/>
+        <PackageReference Include="MediatR" Version="14.1.0"/>
+        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0"/>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
@@ -20,8 +23,15 @@
         </PackageReference>
         <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.16.0"/>
         <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1"/>
+        <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.15.1"/>
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.1"/>
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.1"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.1"/>
+        <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.1-beta.1"/>
+        <PackageReference Include="Npgsql.OpenTelemetry" Version="10.0.2"/>
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0"/>
-        <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0"/>
+        <PackageReference Include="Scalar.AspNetCore" Version="2.13.18"/>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.0"/>
         <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.5"/>
         <PackageReference Include="Swashbuckle.AspNetCore.ReDoc" Version="10.0.0"/>

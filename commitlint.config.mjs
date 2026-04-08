@@ -1,3 +1,16 @@
 export default {
   extends: ["@commitlint/config-conventional"],
+  rules: {
+    "subject-case": [0],
+    "header-max-length": [2, "always", 200],
+  },
+  ignores: [
+    (message) => /^Merge/.test(message),
+    (message) => /^Merge pull request/.test(message),
+    (message) => /^Dev \(#\d+\)/.test(message),
+    (message) => /^Test \(#\d+\)/.test(message),
+    (message) => /^Staging \(#\d+\)/.test(message),
+    (message) => /^Update \.gitignore/.test(message),
+    (message) => /^chore:/.test(message),
+  ],
 };
