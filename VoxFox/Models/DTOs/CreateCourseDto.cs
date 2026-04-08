@@ -17,7 +17,6 @@ public class CreateCourseDto
 
     public string? FullDescription { get; set; }
     public Guid? CategoryId { get; set; }
-    public Guid? AuthorId {get; set;}
     public string? CoverImageUrl { get; set; }
     [Range(0, 1000000)] public decimal Price { get; set; } = 0;
 

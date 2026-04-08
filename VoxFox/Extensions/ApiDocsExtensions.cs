@@ -16,7 +16,7 @@ public static class ApiDocsExtensions
 			});
 
 			c.UseInlineDefinitionsForEnums();
-
+			// Bearer auth в Swagger UI
 			c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
 			{
 				Type = SecuritySchemeType.Http,

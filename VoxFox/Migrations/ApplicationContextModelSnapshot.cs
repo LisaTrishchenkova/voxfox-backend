@@ -22,21 +22,121 @@ namespace VoxFox.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("VoxFox.Models.Entities.Author", b =>
+            modelBuilder.Entity("VoxFox.Models.DTOs.Tasks.TaskEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("CorrectAnswer")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int?>("CorrectIndex")
+                        .HasColumnType("integer");
+
+                    b.PrimitiveCollection<string>("CorrectIndexes")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.PrimitiveCollection<string>("Hints")
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string>("Options")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Points")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("Question")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Authors");
+                    b.HasIndex("LessonId");
+
+                    b.ToTable("Tasks");
+                });
+
+            modelBuilder.Entity("VoxFox.Models.DTOs.Tasks.TaskSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<int?>("AnswerIndex")
+                        .HasColumnType("integer");
+
+                    b.PrimitiveCollection<string>("AnswerIndexes")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("AnswerText")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("AttemptNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Score")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TaskSubmissions");
                 });
 
             modelBuilder.Entity("VoxFox.Models.Entities.Category", b =>
@@ -296,6 +396,12 @@ namespace VoxFox.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Student");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -304,9 +410,39 @@ namespace VoxFox.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("VoxFox.Models.DTOs.Tasks.TaskEntity", b =>
+                {
+                    b.HasOne("VoxFox.Models.Entities.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("VoxFox.Models.DTOs.Tasks.TaskSubmission", b =>
+                {
+                    b.HasOne("VoxFox.Models.DTOs.Tasks.TaskEntity", "Task")
+                        .WithMany("Submissions")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("VoxFox.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("VoxFox.Models.Entities.Course", b =>
                 {
-                    b.HasOne("VoxFox.Models.Entities.Author", "Author")
+                    b.HasOne("VoxFox.Models.Entities.User", "Author")
                         .WithMany("Courses")
                         .HasForeignKey("AuthorId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -373,9 +509,9 @@ namespace VoxFox.Migrations
                     b.Navigation("Course");
                 });
 
-            modelBuilder.Entity("VoxFox.Models.Entities.Author", b =>
+            modelBuilder.Entity("VoxFox.Models.DTOs.Tasks.TaskEntity", b =>
                 {
-                    b.Navigation("Courses");
+                    b.Navigation("Submissions");
                 });
 
             modelBuilder.Entity("VoxFox.Models.Entities.Category", b =>
@@ -393,6 +529,11 @@ namespace VoxFox.Migrations
             modelBuilder.Entity("VoxFox.Models.Entities.Section", b =>
                 {
                     b.Navigation("Lessons");
+                });
+
+            modelBuilder.Entity("VoxFox.Models.Entities.User", b =>
+                {
+                    b.Navigation("Courses");
                 });
 #pragma warning restore 612, 618
         }

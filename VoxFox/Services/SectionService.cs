@@ -37,7 +37,7 @@ namespace VoxFox.Services.Course
 
                 return ServiceResult<SectionDto>.Created(MapToDo(createSection));
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return ServiceResult<SectionDto>.Fail(
                     $"Ошибка при создании раздела: {ex.Message}",
@@ -60,7 +60,7 @@ namespace VoxFox.Services.Course
 
                 return ServiceResult<bool>.Ok(true, "Раздел успешно удален");
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return ServiceResult<bool>.Fail(
                      $"Ошибка при удалении раздела: {ex.Message}",
@@ -98,7 +98,7 @@ namespace VoxFox.Services.Course
 
                 return ServiceResult<IReadOnlyCollection<SectionDto>>.Ok(sectionDto);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return ServiceResult<IReadOnlyCollection<SectionDto>>.Fail(
                     $"Ошибка при получении списка разделов: {ex.Message}",
@@ -125,7 +125,7 @@ namespace VoxFox.Services.Course
                 var lessonsDto = lessons.Select(MapToDo).ToList();
                 return ServiceResult<IList<LessonDto>>.Ok(lessonsDto);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return ServiceResult<IList<LessonDto>>.Fail(
                     $"Ошибка при получении уроков раздела: {ex.Message}",
@@ -150,7 +150,7 @@ namespace VoxFox.Services.Course
 
                 return ServiceResult<SectionDto?>.Ok(MapToDo(section));
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return ServiceResult<SectionDto?>.Fail(
                     $"Ошибка при получении раздела: {ex.Message}",
@@ -179,7 +179,7 @@ namespace VoxFox.Services.Course
 
                 return ServiceResult<SectionDto>.Ok(MapToDo(updatedSection), "Раздел успешно обновлен");
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return ServiceResult<SectionDto>.Fail(
                     $"Ошибка при обновлении раздела: {ex.Message}",
