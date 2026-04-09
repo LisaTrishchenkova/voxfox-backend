@@ -26,6 +26,8 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 		services.AddScoped<IEnrollmentService, EnrollmentService>();
 		services.AddScoped<ITaskRepository, TaskRepository>();
+		services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+		services.AddScoped<IFavoriteService, FavoriteService>();
 		services.AddMediatR(cfg =>
 			cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 		services.AddScoped<IJwtService, JwtService>();

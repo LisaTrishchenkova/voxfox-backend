@@ -12,10 +12,10 @@ namespace VoxFox.Models.Entities
         public DbSet<Tag> Tags { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Category> Categories { get; set; }
-        // public DbSet<Author> Authors { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<TaskEntity> Tasks { get; set; }
         public DbSet<TaskSubmission> TaskSubmissions { get; set; }
+        public DbSet<Favorite> Favorites { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -49,7 +49,7 @@ namespace VoxFox.Models.Entities
 
             modelBuilder.Entity<Course>()
 	            .HasOne(c => c.Author)
-	            .WithMany(u => u.Courses)  
+	            .WithMany(u => u.Courses)
 	            .HasForeignKey(c => c.AuthorId)
 	            .OnDelete(DeleteBehavior.Restrict);
 
@@ -225,6 +225,33 @@ namespace VoxFox.Models.Entities
 		           .OnDelete(DeleteBehavior.Restrict);
            });
 
+           modelBuilder.Entity<Favorite>(entity =>
+           {
+	           entity.HasKey(e => e.Id);
+
+	           entity.Property(e => e.Id)
+		           .HasColumnType("uuid")
+		           .HasDefaultValueSql("gen_random_uuid()");
+
+	           entity.Property(e => e.CreatedAt)
+		           .IsRequired()
+		           .HasColumnType("timestamp with time zone")
+		           .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	           // один пользователь не может добавить курс в избранное дважды
+	           entity.HasIndex(e => new { e.UserId, e.CourseId })
+		           .IsUnique();
+
+	           entity.HasOne(e => e.User)
+		           .WithMany()
+		           .HasForeignKey(e => e.UserId)
+		           .OnDelete(DeleteBehavior.Restrict);
+
+	           entity.HasOne(e => e.Course)
+		           .WithMany()
+		           .HasForeignKey(e => e.CourseId)
+		           .OnDelete(DeleteBehavior.Restrict);
+           });
            modelBuilder.Entity<TaskEntity>(entity =>
 {
     entity.HasKey(e => e.Id);
