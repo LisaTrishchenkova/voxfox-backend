@@ -17,6 +17,7 @@ public class CourseDto
     public int EnrollmentCount { get; set; }
     public decimal Rating { get; set; }
     public int DurationMinutes { get; set; }
+
     public Guid? CategoryId { get; set; }
     public DateTime? PublishedAt { get; set; }
     public DateTime CreatedAt { get; init; }
