@@ -5,5 +5,7 @@ namespace VoxFox.Models.Responses.UserResponse
         public string? Name { get; set; }
 
         public string? Email { get; set; }
+
+        public string? AvatarUrl { get; set; }
     }
 }

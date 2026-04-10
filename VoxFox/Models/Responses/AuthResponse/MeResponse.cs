@@ -7,5 +7,6 @@ namespace VoxFox.Models.Responses.AuthResponse
         public string? Role { get; set; }
         public bool IsEmailVerified { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? AvatarUrl { get; set; } 
     }
 }
