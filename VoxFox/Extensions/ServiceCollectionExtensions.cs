@@ -6,6 +6,7 @@ using VoxFox.Interfaces.Enrollment;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Interfaces.Section;
 using VoxFox.Interfaces.Task;
+using VoxFox.Interfaces.User;
 using VoxFox.Models.Entities;
 using VoxFox.Repositories;
 using VoxFox.Services;
@@ -28,6 +29,7 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<ITaskRepository, TaskRepository>();
 		services.AddScoped<IFavoriteRepository, FavoriteRepository>();
 		services.AddScoped<IFavoriteService, FavoriteService>();
+		services.AddScoped<IFileStorageService, LocalFileStorageService>();
 		services.AddMediatR(cfg =>
 			cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 		services.AddScoped<IJwtService, JwtService>();

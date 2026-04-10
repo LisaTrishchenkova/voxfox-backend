@@ -10,18 +10,17 @@ public class EnrollmentService : IEnrollmentService
 {
     private readonly IEnrollmentRepository _enrollmentRepository;
     private readonly ICourseRepository _courseRepository;
+    private readonly IFavoriteRepository _favoriteRepository;
     private readonly ILogger<EnrollmentService> _logger;
 
-    public EnrollmentService(
-        IEnrollmentRepository enrollmentRepository,
-        ICourseRepository courseRepository,
-        ILogger<EnrollmentService> logger)
-    {
-        _enrollmentRepository = enrollmentRepository;
-        _courseRepository = courseRepository;
-        _logger = logger;
-    }
 
+    public EnrollmentService(IEnrollmentRepository enrollmentRepository, ICourseRepository courseRepository, IFavoriteRepository favoriteRepository, ILogger<EnrollmentService> logger)
+    {
+	    _enrollmentRepository = enrollmentRepository;
+	    _courseRepository = courseRepository;
+	    _favoriteRepository = favoriteRepository;
+	    _logger = logger;
+    }
 
     public async Task<ServiceResult<EnrollmentDto>> EnrollAsync(Guid courseId, Guid userId)
     {
@@ -52,6 +51,11 @@ public class EnrollmentService : IEnrollmentService
         };
 
         var created = await _enrollmentRepository.AddAsync(enrollment);
+
+        var favorite = await _favoriteRepository.GetByUserAndCourseAsync(userId, courseId);
+        if (favorite != null)
+	        await _favoriteRepository.DeleteAsync(favorite);
+
         return ServiceResult<EnrollmentDto>.Ok(MapToDto(created));
     }
 

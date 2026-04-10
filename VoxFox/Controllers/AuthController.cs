@@ -106,7 +106,8 @@ namespace VoxFox.Controllers
 		        Email = user.Email,
 		        Role = user.Role.ToString(),
 		        IsEmailVerified = false,
-		        CreatedAt = DateTime.UtcNow
+		        CreatedAt = DateTime.UtcNow,
+		        AvatarUrl = user.AvatarUrl
 	        });
         }
 

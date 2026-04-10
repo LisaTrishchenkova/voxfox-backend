@@ -9,6 +9,7 @@ namespace VoxFox.Models.Entities
         public string Password { get; set; } = default!;
         public string Email { get; set; } = default!;
         public UserRole Role { get; set; } = UserRole.Student;
+        public string? AvatarUrl { get; set; }
 
         public ICollection<Course> Courses { get; set; } = [];
     }
