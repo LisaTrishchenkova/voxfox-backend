@@ -103,6 +103,8 @@ namespace VoxFox.Controllers
 	        return Ok(new MeResponse
 	        {
 		        Id = user.Id,
+		        Name = user.Name,
+		        Bio = user.Bio,
 		        Email = user.Email,
 		        Role = user.Role.ToString(),
 		        IsEmailVerified = false,

@@ -249,46 +249,63 @@ public class CourseService : ICourseService
 
     public async Task<PaginatedResponse<CourseDto>> SearchAsync(CourseSearchRequest request)
     {
-        try
-        {
-            var query = _courseRepository.GetPublishedCoursesQuery();
+	    try
+	    {
+		    var query = _courseRepository.GetPublishedCoursesQuery();
 
-            if (request.CategoryId.HasValue)
-            {
-                query = query.Where(c => c.CategoryId == request.CategoryId.Value);
-            }
-            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-            {
-                query = ApplySearchPriority(query, request.SearchTerm);
-            }
+		    // ДОБАВЬ СЮДА
+		    var beforeFilter = await _courseRepository.GetTotalCountAsync(query);
+		    _logger.LogInformation("Курсов до фильтров: {Count}", beforeFilter);
 
-            var totalCount = await _courseRepository.GetTotalCountAsync(query);
+		    if (request.CategoryId.HasValue)
+			    query = query.Where(c => c.CategoryId == request.CategoryId.Value);
 
-            if (request.SortBy.HasValue)
-            {
-                query = ApplySorting(query, request.SortBy.Value, request.SearchTerm);
-            }
+		    if (request.Level.HasValue)
+			    query = query.Where(c => c.Level == request.Level.Value);
 
-            var skip = (request.Page - 1) * request.PageSize;
-            var take = request.PageSize;
+		    if (request.IsFree.HasValue && request.IsFree.Value)
+			    query = query.Where(c => c.Price == 0);
+		    else
+		    {
+			    if (request.MinPrice.HasValue)
+			    {
+				    var minPrice = Math.Round(request.MinPrice.Value, 2);
+				    query = query.Where(c => c.Price >= minPrice);
+			    }
 
-            var items = await _courseRepository.GetCoursesWithProjectionAsync(
-                query,
-                skip,
-                take
-            );
-            var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
-            _logger.LogInformation(
-                "Поиск курсов: SearchTerm={SearchTerm}, Найдено={TotalCount}",
-                request.SearchTerm, totalCount);
-            return new PaginatedResponse<CourseDto>
-            {
-                Items = items,
-                TotalCount = totalCount,
-                CurrentPage = request.Page,
-                TotalPages = totalPages,
-                PageSize = request.PageSize
-            };
+			    if (request.MaxPrice.HasValue)
+			    {
+				    var maxPrice = Math.Round(request.MaxPrice.Value, 2);
+				    query = query.Where(c => c.Price <= maxPrice);
+			    }
+		    }
+
+		    if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+			    query = ApplySearchPriority(query, request.SearchTerm);
+
+		    var totalCount = await _courseRepository.GetTotalCountAsync(query);
+
+		    if (request.SortBy.HasValue)
+			    query = ApplySorting(query, request.SortBy.Value, request.SearchTerm);
+
+		    var items = await _courseRepository.GetCoursesWithProjectionAsync(
+			    query,
+			    (request.Page - 1) * request.PageSize,
+			    request.PageSize
+		    );
+
+		    _logger.LogInformation(
+			    "Поиск курсов: SearchTerm={SearchTerm}, MinPrice={MinPrice}, MaxPrice={MaxPrice}, Найдено={TotalCount}",
+			    request.SearchTerm, request.MinPrice, request.MaxPrice, totalCount);
+
+		    return new PaginatedResponse<CourseDto>
+		    {
+			    Items = items,
+			    TotalCount = totalCount,
+			    CurrentPage = request.Page,
+			    TotalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize),
+			    PageSize = request.PageSize
+		    };
         }
         catch (System.Exception ex)
         {
@@ -383,9 +400,9 @@ public class CourseService : ICourseService
         return ServiceResult<bool>.Ok(true);
     }
 
-    public async Task<ServiceResult<IList<CourseDto>>> GetMyCoursesAsync(Guid userId)
+    public async Task<ServiceResult<IList<CourseDto>>> GetMyCoursesAsync(Guid userId, CourseStatus? status = null)
     {
-	    var course = await _courseRepository.GetByAuthorIdAsync(userId);
+	    var course = await _courseRepository.GetByAuthorIdAsync(userId, status);
 
 	    var resualt = course.Select(MapToDo).ToList();
 	    return ServiceResult<IList<CourseDto>>.Ok(resualt);
@@ -467,5 +484,29 @@ public class CourseService : ICourseService
 	    await _courseRepository.UpdateAsync(course);
 
 	    return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<PaginatedResponse<CourseDto>> GetPendingCoursesAsync(int page, int pageSize)
+    {
+	    var query = _courseRepository.GetPendingCoursesQuery();
+
+	    var totalCount = await _courseRepository.GetTotalCountAsync(query);
+
+	    var items = await _courseRepository.GetCoursesWithProjectionAsync(
+		    query,
+		    (page - 1) * pageSize,
+		    pageSize
+	    );
+
+	    var resualt = new PaginatedResponse<CourseDto>
+	    {
+		    Items = items,
+		    TotalCount = totalCount,
+		    CurrentPage = page,
+		    TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+		    PageSize = pageSize
+	    };
+
+	    return resualt;
     }
 }
