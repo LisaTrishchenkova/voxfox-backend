@@ -29,13 +29,23 @@ public class CoursesController : ControllerBase
 		[FromQuery] int page = 1,
 		[FromQuery] int pageSize = 10,
 		[FromQuery] Guid? categoryId = null,
-		[FromQuery] CoursesSortBy? sortBy = CoursesSortBy.Relevance)
+		[FromQuery] CoursesSortBy? sortBy = CoursesSortBy.Relevance,
+		[FromQuery] CourseLevel? level = null,
+		[FromQuery] decimal? minPrice = null,
+		[FromQuery] decimal? maxPrice = null,
+		[FromQuery] bool? isFree = null)
 	{
+		_logger.LogInformation(
+			"Контроллер получил: minPrice={MinPrice}, maxPrice={MaxPrice}",
+			minPrice, maxPrice);
 		try
 		{
 			if (page < 1) return BadRequest(new { error = "Page должен быть больше или равен 1" });
 
 			if (pageSize < 1 || pageSize > 50) return BadRequest(new { error = "PageSize должен быть от 1 до 50" });
+			if (minPrice.HasValue && minPrice < 0) return BadRequest(new { error = "MinPrice не должен быть отрицательным"});
+			if (maxPrice.HasValue && maxPrice < 0) return BadRequest(new { error = "MaxPrice не должен быть отрицательным"});
+			if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice) return BadRequest(new {error = "MinPrice не должен быть больше MaxPrice" });
 
 			// if (!Enum.TryParse<CoursesSortBy>(sortBy, true, out var sortByEnum))
 			// {
@@ -51,7 +61,11 @@ public class CoursesController : ControllerBase
 				Page = page,
 				PageSize = pageSize,
 				CategoryId = categoryId,
-				SortBy = sortBy
+				SortBy = sortBy,
+				Level = level,
+				MinPrice = minPrice,
+				MaxPrice = maxPrice,
+				IsFree = isFree
 			};
 
 			var result = await _courseService.SearchAsync(request);
@@ -65,6 +79,21 @@ public class CoursesController : ControllerBase
 		}
 	}
 
+	[HttpGet("pending")]
+	[Authorize(Roles = "Moderator,Admin")]
+	[ProducesResponseType(StatusCodes.Status200OK)]
+	public async Task<ActionResult<PaginatedResponse<CourseDto>>> GetPendingCourses(
+		[FromQuery] int page = 1,
+		[FromQuery] int pageSize = 20)
+	{
+		if (page < 1)
+			return BadRequest(new { error = "Page должен быть больше или равен 1" });
+		if (pageSize < 1 || pageSize > 50)
+			return BadRequest(new { error = "PageSize должен быть от 1 до 50" });
+
+		var result = await _courseService.GetPendingCoursesAsync(page, pageSize);
+		return Ok(result);
+	}
 	// [HttpPut("{id}/publish")]
 	// [ProducesResponseType(StatusCodes.Status204NoContent)]
 	// [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -186,10 +215,13 @@ public class CoursesController : ControllerBase
 	[Authorize(Roles = "Teacher,Admin")]
 	[ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IList<CourseDto>))]
 	public async Task<ActionResult<IList<CourseDto>>> GetMyCourses(
+		[FromQuery] CourseStatus? status = null
 	)
 	{
 		var userId = User.GetUserId();
-		var result = await _courseService.GetMyCoursesAsync(userId.Value);
+		if (userId == null) return Unauthorized();
+
+		var result = await _courseService.GetMyCoursesAsync(userId.Value, status);
 
 		if (!result.Success)
 			return StatusCode(result.StatusCode ?? 400, new { error = result.Message });

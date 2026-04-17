@@ -131,16 +131,21 @@ public class CourseRepository : ICourseRepository
 	}
 
 	//TODO: доделать чтобы было из Jwt
-	public async Task<IList<Course>> GetByAuthorIdAsync(Guid authorId)
+	public async Task<IList<Course>> GetByAuthorIdAsync(Guid authorId, CourseStatus? status = null)
 	{
 		try
 		{
-			var courses = await _context.Courses
+			var query = _context.Courses
 				.Include(c => c.Tags)
 				.Include(c => c.Author)
-				.Where(c => c.AuthorId == authorId)
+				.Where(c => c.AuthorId == authorId);
+
+			if (status.HasValue)
+				query = query.Where(c => c.Status == status.Value);
+
+			return await query
+				.OrderByDescending(c => c.CreatedAt)
 				.ToListAsync();
-			return courses;
 		}
 		catch (System.Exception ex)
 		{
@@ -222,5 +227,17 @@ public class CourseRepository : ICourseRepository
 			.Skip(skip)
 			.Take(take)
 			.ToListAsync(ct);
+	}
+
+	public IQueryable<Course> GetPendingCoursesQuery()
+	{
+		var courses = _context.Courses
+			.Where(c => c.Status == CourseStatus.UnderReview && !c.IsDeleted)
+			.Include(c => c.Author)
+			.Include(c => c.Tags)
+			.OrderBy(c => c.UpdatedAt)
+			.AsQueryable();
+
+		return courses;
 	}
 }

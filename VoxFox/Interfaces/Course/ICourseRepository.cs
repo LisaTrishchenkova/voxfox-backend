@@ -1,3 +1,4 @@
+using VoxFox.Enums;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 
@@ -12,7 +13,7 @@ public interface ICourseRepository
     Task<bool> DeleteSoftAsync(Models.Entities.Course course);
     Task<bool> ExistCourseByIdAsync(Guid id);
     Task<IList<Models.Entities.Section>> GetSectionsByCourseIdAsync(Guid courseId);
-    Task<IList<Models.Entities.Course>> GetByAuthorIdAsync(Guid userId);
+    Task<IList<Models.Entities.Course>> GetByAuthorIdAsync(Guid userId, CourseStatus? status = null);
 
 	IQueryable<Course> GetCoursesQuery();
 	IQueryable<Course> GetPublishedCoursesQuery();
@@ -25,4 +26,6 @@ public interface ICourseRepository
 	Task<int> GetTotalCountAsync(IQueryable<Course> query);
 	System.Threading.Tasks.Task DeleteTagAsync(Tag existingTag);
 	Task<List<Course>> GetForReindexAsync(int skip, int take, CancellationToken ct);
+
+	IQueryable<Course> GetPendingCoursesQuery();
 }
