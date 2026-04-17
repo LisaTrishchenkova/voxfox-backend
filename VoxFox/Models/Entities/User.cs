@@ -10,6 +10,9 @@ namespace VoxFox.Models.Entities
         public string Email { get; set; } = default!;
         public UserRole Role { get; set; } = UserRole.Student;
         public string? AvatarUrl { get; set; }
+        public string? Bio { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsDeleted { get; set; } = false;
 
         public ICollection<Course> Courses { get; set; } = [];
     }
