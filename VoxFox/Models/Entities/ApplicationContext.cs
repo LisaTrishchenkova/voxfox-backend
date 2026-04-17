@@ -56,21 +56,31 @@ namespace VoxFox.Models.Entities
 
             modelBuilder.Entity<User>(entity =>
             {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Name)
-                    .IsRequired()
-                    .HasMaxLength(100);
-                entity.Property(e => e.Email)
-                    .IsRequired()
-                    .HasMaxLength(150);
-                entity.HasIndex(e => e.Email)
-                    .IsUnique();
-                entity.Property(e => e.Password)
-                    .IsRequired()
-                    .HasMaxLength(100);
-                entity.Property(e => e.Role)
-	                .HasConversion<string>()
-	                .HasDefaultValue(UserRole.Student);
+	            entity.HasKey(e => e.Id);
+	            entity.Property(e => e.Name)
+		            .IsRequired()
+		            .HasMaxLength(100);
+	            entity.Property(e => e.Email)
+		            .IsRequired()
+		            .HasMaxLength(150);
+	            entity.HasIndex(e => e.Email)
+		            .IsUnique();
+	            entity.Property(e => e.Password)
+		            .IsRequired()
+		            .HasMaxLength(100);
+	            entity.Property(e => e.Role)
+		            .HasConversion<string>()
+		            .HasDefaultValue(UserRole.Student);
+	            entity.Property(e => e.Bio)
+		            .IsRequired(false)
+		            .HasMaxLength(500);
+	            entity.Property(e => e.CreatedAt)
+		            .IsRequired()
+		            .HasColumnType("timestamp with time zone")
+		            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+	            entity.Property(e => e.IsDeleted)
+		            .HasDefaultValue(false);
+	            entity.HasQueryFilter(e => !e.IsDeleted);
             });
             modelBuilder.Entity<Course>(entity =>
             {
