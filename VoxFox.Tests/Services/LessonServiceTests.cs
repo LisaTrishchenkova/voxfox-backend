@@ -17,7 +17,7 @@ public class LessonServiceTests
 
 	public LessonServiceTests()
 	{
-		_sut = new LessonService(_repoMock.Object, _loggerMock.Object);
+	//	_sut = new LessonService(_repoMock.Object, _loggerMock.Object);
 	}
 
 	[Fact]

@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
 			cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 		services.AddScoped<IJwtService, JwtService>();
 		services.AddScoped<CourseSearchService>();
+		services.AddScoped<ILessonProgressRepository, LessonProgressRepository>();
 
 		return services;
 	}
