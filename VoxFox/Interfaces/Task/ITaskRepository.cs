@@ -13,4 +13,5 @@ public interface ITaskRepository
 	Task<TaskSubmission> AddSubmissionAsync(TaskSubmission submission);
 	Task<TaskSubmission?> GetLastSubmissionAsync(Guid taskId, Guid userId);
 	Task<IList<TaskSubmission>> GetSubmissionsByTaskIdAsync(Guid taskId);
+	Task<TaskEntity> UpdateAsync(TaskEntity task);
 }
