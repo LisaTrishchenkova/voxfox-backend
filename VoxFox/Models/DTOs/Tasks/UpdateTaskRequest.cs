@@ -1,11 +1,7 @@
-using MediatR;
-using VoxFox.Models.DTOs.Tasks;
+namespace VoxFox.Models.DTOs.Tasks;
 
-namespace VoxFox.Features.Tasks.Commands.UpdateTask;
-
-public class UpdateTaskCommand : IRequest<TaskTeacherDto>
+public class UpdateTaskRequest
 {
-	public Guid TaskId { get; set; }
 	public string? Question { get; set; }
 	public List<string>? Options { get; set; }
 	public int? CorrectIndex { get; set; }

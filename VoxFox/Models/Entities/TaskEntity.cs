@@ -21,6 +21,7 @@ public class TaskEntity
 	public int OrderIndex { get; set; }
 	public bool IsRequired { get; set; } = true;
 	public DateTime CreatedAt { get; set; }
+	public bool IsDeleted { get; set; } = false;
 
 	public Lesson? Lesson { get; set; }
 	public ICollection<TaskSubmission> Submissions { get; set; } = new List<TaskSubmission>();

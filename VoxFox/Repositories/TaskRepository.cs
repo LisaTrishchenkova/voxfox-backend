@@ -109,4 +109,11 @@ public class TaskRepository : ITaskRepository
 			.OrderByDescending(s => s.SubmittedAt)
 			.ToListAsync();
 	}
+
+	public async Task<TaskEntity> UpdateAsync(TaskEntity task)
+	{
+		_context.Tasks.Update(task);
+		await _context.SaveChangesAsync();
+		return task;
+	}
 }

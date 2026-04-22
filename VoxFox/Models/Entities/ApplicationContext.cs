@@ -319,6 +319,15 @@ namespace VoxFox.Models.Entities
         .WithMany()
         .HasForeignKey(e => e.LessonId)
         .OnDelete(DeleteBehavior.Cascade);
+    entity.Property(e => e.IsDeleted)
+	    .HasDefaultValue(false);
+
+    entity.HasQueryFilter(e => !e.IsDeleted);
+
+    entity.HasOne(e => e.Lesson)
+	    .WithMany()
+	    .HasForeignKey(e => e.LessonId)
+	    .OnDelete(DeleteBehavior.Cascade);
 });
 
 modelBuilder.Entity<TaskSubmission>(entity =>
@@ -357,7 +366,7 @@ modelBuilder.Entity<TaskSubmission>(entity =>
     entity.HasOne(e => e.Task)
         .WithMany(t => t.Submissions)
         .HasForeignKey(e => e.TaskId)
-        .OnDelete(DeleteBehavior.Cascade);
+        .OnDelete(DeleteBehavior.Restrict);
 
     entity.HasOne(e => e.User)
         .WithMany()
