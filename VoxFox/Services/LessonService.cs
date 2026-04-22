@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using VoxFox.Enums;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Models;
 using VoxFox.Models.DTOs;
@@ -9,11 +11,15 @@ public class LessonService : ILessonService
 {
 	private readonly ILessonRepository _lessonRepository;
 	private readonly ILogger<LessonService> _logger;
+	private readonly ILessonProgressRepository _progressRepository;
+	private readonly ApplicationContext _context;
 
-	public LessonService(ILessonRepository lessonRepository, ILogger<LessonService> logger)
+	public LessonService(ILessonRepository lessonRepository, ILogger<LessonService> logger, ILessonProgressRepository progressRepository, ApplicationContext context)
 	{
 		_lessonRepository = lessonRepository;
 		_logger = logger;
+		_progressRepository = progressRepository;
+		_context = context;
 	}
 
 	public async Task<ServiceResult<LessonDto>> CreateLessonAsync(Guid sectionId, CreateLessonDto createLessonDto)
@@ -63,6 +69,75 @@ public class LessonService : ILessonService
 			);
 		}
 	}
+
+public async Task<ServiceResult<LessonProgressDto>> CompleteLessonAsync(Guid lessonId, Guid userId)
+{
+    var lesson = await _lessonRepository.GetByIdAsync(lessonId);
+    if (lesson == null)
+        return ServiceResult<LessonProgressDto>.Fail("Урок не найден", 404);
+
+    var enrollment = await _context.Enrollments
+        .FirstOrDefaultAsync(e => e.UserId == userId &&
+                                   e.Course!.Sections.Any(s =>
+                                       s.Lessons.Any(l => l.Id == lessonId)));
+    if (enrollment == null)
+        return ServiceResult<LessonProgressDto>.Fail("Вы не записаны на этот курс", 403);
+
+    var existing = await _progressRepository.GetAsync(userId, lessonId);
+    if (existing != null)
+        return ServiceResult<LessonProgressDto>.Fail("Урок уже отмечен как пройденный", 409);
+
+    var progress = new LessonProgress
+    {
+        UserId = userId,
+        LessonId = lessonId,
+        EnrollmentId = enrollment.Id,
+        CompletedAt = DateTime.UtcNow
+    };
+    await _progressRepository.AddAsync(progress);
+
+    var completed = await _progressRepository.CountCompletedAsync(enrollment.Id);
+    var total = await _progressRepository.CountTotalLessonsInCourseAsync(enrollment.CourseId);
+
+    enrollment.ProgressPercent = total > 0
+        ? (int)Math.Round((double)completed / total * 100)
+        : 0;
+
+    if (enrollment.ProgressPercent >= 100)
+    {
+        enrollment.Status = EnrollmentStatus.Completed;
+        enrollment.CompletedAt = DateTime.UtcNow;
+    }
+
+    await _context.SaveChangesAsync();
+
+    return ServiceResult<LessonProgressDto>.Ok(new LessonProgressDto
+    {
+        LessonId = lessonId,
+        EnrollmentId = enrollment.Id,
+        CompletedAt = progress.CompletedAt,
+        ProgressPercent = enrollment.ProgressPercent
+    });
+}
+
+public async Task<ServiceResult<bool>> ReorderLessonsAsync(Guid sectionId, List<Guid> lessonIds)
+{
+    var lessons = await _context.Lessons
+        .Where(l => l.SectionId == sectionId && lessonIds.Contains(l.Id))
+        .ToListAsync();
+
+    if (lessons.Count != lessonIds.Count)
+        return ServiceResult<bool>.Fail("Некоторые уроки не найдены или не принадлежат этой секции", 400);
+
+    for (int i = 0; i < lessonIds.Count; i++)
+    {
+        var lesson = lessons.First(l => l.Id == lessonIds[i]);
+        lesson.OrderIndex = i;
+    }
+
+    await _context.SaveChangesAsync();
+    return ServiceResult<bool>.Ok(true);
+}
 
 	public async Task<ServiceResult<LessonDto?>> GetLessonByIdAsync(Guid id)
 	{

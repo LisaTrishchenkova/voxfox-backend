@@ -8,5 +8,7 @@ namespace VoxFox.Interfaces.Lesson
         Task<ServiceResult<LessonDto>> CreateLessonAsync(Guid sectionId, CreateLessonDto createLessonDto);
         Task<ServiceResult<LessonDto>> UpdateLessonAsync(Guid id, UpdateLessonDto updateLessonDto);
         Task<ServiceResult<bool>> DeleteLessonAsync(Guid id);
+        Task<ServiceResult<LessonProgressDto>> CompleteLessonAsync(Guid lessonId, Guid userId);
+        Task<ServiceResult<bool>> ReorderLessonsAsync(Guid sectionId, List<Guid> lessonIds);
     }
 }

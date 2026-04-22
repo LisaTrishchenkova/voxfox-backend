@@ -16,6 +16,7 @@ namespace VoxFox.Models.Entities
         public DbSet<TaskEntity> Tasks { get; set; }
         public DbSet<TaskSubmission> TaskSubmissions { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
+        public DbSet<LessonProgress> LessonProgresses { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -169,6 +170,8 @@ namespace VoxFox.Models.Entities
                     .HasColumnType("uuid")
                     .HasDefaultValueSql("gen_random_uuid()");
                 entity.HasQueryFilter(e => !e.IsDeleted);
+                entity.Property(e => e.OrderIndex)
+	                .HasDefaultValue(0);
             });
 
             modelBuilder.Entity<Category>(entity =>
@@ -372,6 +375,38 @@ modelBuilder.Entity<TaskSubmission>(entity =>
         .WithMany()
         .HasForeignKey(e => e.UserId)
         .OnDelete(DeleteBehavior.Restrict);
+});
+modelBuilder.Entity<LessonProgress>(entity =>
+{
+	entity.HasKey(e => e.Id);
+
+	entity.Property(e => e.Id)
+		.HasColumnType("uuid")
+		.HasDefaultValueSql("gen_random_uuid()");
+
+	entity.Property(e => e.CompletedAt)
+		.IsRequired()
+		.HasColumnType("timestamp with time zone")
+		.HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	// уникальный индекс — студент не может пройти урок дважды
+	entity.HasIndex(e => new { e.UserId, e.LessonId })
+		.IsUnique();
+
+	entity.HasOne(e => e.User)
+		.WithMany()
+		.HasForeignKey(e => e.UserId)
+		.OnDelete(DeleteBehavior.Restrict);
+
+	entity.HasOne(e => e.Lesson)
+		.WithMany()
+		.HasForeignKey(e => e.LessonId)
+		.OnDelete(DeleteBehavior.Restrict);
+
+	entity.HasOne(e => e.Enrollment)
+		.WithMany()
+		.HasForeignKey(e => e.EnrollmentId)
+		.OnDelete(DeleteBehavior.Restrict);
 });
 
             base.OnModelCreating(modelBuilder);
