@@ -68,4 +68,29 @@ public class EnrollmentsController : ControllerBase
 
         return Ok(result.Data);
     }
+
+    [HttpGet("/api/Courses/{courseId}/enrollments")]
+    [Authorize(Roles = "Teacher,Admin")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IList<EnrollmentDto>))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IList<EnrollmentDto>>> GetCourseEnrollments(
+	    [FromRoute] Guid courseId
+    )
+    {
+	    var userId = User.GetUserId();
+	    if (userId == null)
+	    {
+		    return Unauthorized();
+	    }
+
+	    var role = User.GetUserRole();
+
+	    var resualt = await _enrollmentService.GetCourseEnrollmentsAsync(courseId, userId.Value, role);
+
+	    if (!resualt.Success)
+		    return StatusCode(resualt.StatusCode ?? 400, new { error = resualt.Message });
+
+	    return Ok(resualt.Data);
+    }
 }

@@ -94,4 +94,13 @@ public class EnrollmentRepository : IEnrollmentRepository
 			throw;
 		}
 	}
+
+	public async Task<IList<Enrollment>> GetByCourseIdAsync(Guid courseId)
+	{
+			var enrollments = await _context.Enrollments
+				.Where(e => e.CourseId == courseId)
+				.Include(e => e.User)
+				.ToListAsync();
+			return enrollments;
+	}
 }

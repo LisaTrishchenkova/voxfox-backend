@@ -90,6 +90,39 @@ public class EnrollmentService : IEnrollmentService
         return ServiceResult<IList<EnrollmentDto>>.Ok(result);
     }
 
+    public async Task<ServiceResult<IList<EnrollmentDto>>> GetCourseEnrollmentsAsync(Guid courseId, Guid requesterId,
+	    UserRole? requesterRole)
+    {
+	    var course = await _courseRepository.GetByIdAsync(courseId);
+	    if (course == null)
+	    {
+		    return ServiceResult<IList<EnrollmentDto>>.Fail(
+			    $"Курс с id: {courseId} не найден",
+			    StatusCodes.Status404NotFound);
+	    }
+
+	    var isAdminOrModerator = requesterRole is UserRole.Admin or UserRole.Moderator;
+	    if (!isAdminOrModerator && course.AuthorId != requesterId)
+		    return ServiceResult<IList<EnrollmentDto>>.Fail(
+			    "Нет доступа — вы не являетесь автором курса",
+			    StatusCodes.Status403Forbidden);
+
+	    var enrollments = await _enrollmentRepository.GetByCourseIdAsync(courseId);
+
+	    var resualt = enrollments.Select(e => new EnrollmentDto
+	    {
+		    Id = e.Id,
+		    UserId = e.UserId,
+		    CourseId = e.CourseId,
+		    Status = e.Status,
+		    ProgressPercent = e.ProgressPercent,
+		    EnrolledAt = e.EnrolledAt,
+		    CompletedAt = e.CompletedAt
+	    }).ToList();
+
+	    return ServiceResult<IList<EnrollmentDto>>.Ok(resualt);
+    }
+
     private EnrollmentDto MapToDto(Enrollment enrollment)
     {
         return new EnrollmentDto
