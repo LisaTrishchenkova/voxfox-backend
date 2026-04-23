@@ -17,6 +17,7 @@ namespace VoxFox.Models.Entities
         public DbSet<TaskSubmission> TaskSubmissions { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<LessonProgress> LessonProgresses { get; set; }
+        public DbSet<Review> Reviews { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -406,6 +407,44 @@ modelBuilder.Entity<LessonProgress>(entity =>
 	entity.HasOne(e => e.Enrollment)
 		.WithMany()
 		.HasForeignKey(e => e.EnrollmentId)
+		.OnDelete(DeleteBehavior.Restrict);
+});
+modelBuilder.Entity<Review>(entity =>
+{
+	entity.HasKey(e => e.Id);
+
+	entity.Property(e => e.Id)
+		.HasColumnType("uuid")
+		.HasDefaultValueSql("gen_random_uuid()");
+
+	entity.Property(e => e.Rating)
+		.IsRequired();
+
+	entity.Property(e => e.Comment)
+		.IsRequired(false)
+		.HasMaxLength(2000);
+
+	entity.Property(e => e.CreatedAt)
+		.IsRequired()
+		.HasColumnType("timestamp with time zone")
+		.HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	entity.Property(e => e.UpdatedAt)
+		.IsRequired(false)
+		.HasColumnType("timestamp with time zone");
+
+	// один студент — один отзыв на курс
+	entity.HasIndex(e => new { e.UserId, e.CourseId })
+		.IsUnique();
+
+	entity.HasOne(e => e.User)
+		.WithMany()
+		.HasForeignKey(e => e.UserId)
+		.OnDelete(DeleteBehavior.Restrict);
+
+	entity.HasOne(e => e.Course)
+		.WithMany()
+		.HasForeignKey(e => e.CourseId)
 		.OnDelete(DeleteBehavior.Restrict);
 });
 
