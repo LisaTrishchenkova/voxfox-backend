@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Microsoft.Extensions.Logging;
 using Moq;
+using VoxFox.Interfaces.Certificate;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
@@ -16,6 +17,7 @@ public class LessonServiceTests
 	private readonly Mock<ILessonRepository> _repoMock = new();
 	private readonly Mock<ILogger<LessonService>> _loggerMock = new();
 	private readonly Mock<ILessonProgressRepository> _progressMock = new();
+	private readonly Mock<ICertificateService> _mock = new();
 	private readonly ApplicationContext _context;
 
 	public LessonServiceTests()
@@ -25,7 +27,7 @@ public class LessonServiceTests
 			.Options;
 		_context = new ApplicationContext(options);
 
-	 _sut = new LessonService(_repoMock.Object, _loggerMock.Object, _progressMock.Object, _context);
+	 _sut = new LessonService(_repoMock.Object, _loggerMock.Object, _progressMock.Object, _context, _mock.Object);
 	}
 
 	[Fact]

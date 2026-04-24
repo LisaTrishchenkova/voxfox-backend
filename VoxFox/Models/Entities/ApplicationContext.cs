@@ -20,6 +20,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Question> Questions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Certificate> Certificates { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -528,6 +529,45 @@ modelBuilder.Entity<Notification>(entity =>
 	entity.HasOne(e => e.User)
 		.WithMany()
 		.HasForeignKey(e => e.UserId)
+		.OnDelete(DeleteBehavior.Restrict);
+});
+modelBuilder.Entity<Certificate>(entity =>
+{
+	entity.HasKey(e => e.Id);
+
+	entity.Property(e => e.Id)
+		.HasColumnType("uuid")
+		.HasDefaultValueSql("gen_random_uuid()");
+
+	entity.Property(e => e.VerificationToken)
+		.IsRequired()
+		.HasMaxLength(100);
+
+	entity.HasIndex(e => e.VerificationToken)
+		.IsUnique();
+
+	// один сертификат на один enrollment
+	entity.HasIndex(e => e.EnrollmentId)
+		.IsUnique();
+
+	entity.Property(e => e.IssuedAt)
+		.IsRequired()
+		.HasColumnType("timestamp with time zone")
+		.HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	entity.HasOne(e => e.User)
+		.WithMany()
+		.HasForeignKey(e => e.UserId)
+		.OnDelete(DeleteBehavior.Restrict);
+
+	entity.HasOne(e => e.Course)
+		.WithMany()
+		.HasForeignKey(e => e.CourseId)
+		.OnDelete(DeleteBehavior.Restrict);
+
+	entity.HasOne(e => e.Enrollment)
+		.WithMany()
+		.HasForeignKey(e => e.EnrollmentId)
 		.OnDelete(DeleteBehavior.Restrict);
 });
             base.OnModelCreating(modelBuilder);
