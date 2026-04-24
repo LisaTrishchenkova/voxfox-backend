@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
 using VoxFox.Interfaces;
+using VoxFox.Interfaces.Notification;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
 using VoxFox.Models.Requests;
@@ -11,14 +12,17 @@ namespace VoxFox.Services;
 public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<CourseService> _logger;
     private readonly ApplicationContext _context;
 
-    public CourseService(ApplicationContext context, ICourseRepository courseRepository, ILogger<CourseService> logger)
+
+    public CourseService(ICourseRepository courseRepository, INotificationService notificationService, ILogger<CourseService> logger, ApplicationContext context)
     {
+	    _courseRepository = courseRepository;
+	    _notificationService = notificationService;
+	    _logger = logger;
 	    _context = context;
-        _courseRepository = courseRepository;
-        _logger = logger;
     }
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto, Guid authorId)
@@ -462,6 +466,16 @@ public class CourseService : ICourseService
 	    course.UpdatedAt = DateTime.UtcNow;
 	    await _courseRepository.UpdateAsync(course);
 
+	    if (course.AuthorId.HasValue)
+	    {
+		    await _notificationService.SendAsync(
+			    course.AuthorId.Value,
+			    "Курс одобрен",
+			    $"Ваш курс «{course.Title}» прошёл модерацию и опубликован",
+			    NotificationType.CourseApproved,
+			    course.Id);
+	    }
+
 	    return ServiceResult<bool>.Ok(true);
     }
 
@@ -482,6 +496,16 @@ public class CourseService : ICourseService
 	    course.Status = CourseStatus.RejectedByModerator;
 	    course.UpdatedAt = DateTime.UtcNow;
 	    await _courseRepository.UpdateAsync(course);
+
+	    if (course.AuthorId.HasValue)
+	    {
+		    await _notificationService.SendAsync(
+			    course.AuthorId.Value,
+			    "Курс отклонён",
+			    $"Ваш курс «{course.Title}» отклонён модератором.{(string.IsNullOrWhiteSpace(reason) ? "" : $" Причина: {reason}")}",
+			    NotificationType.CourseRejected,
+			    course.Id);
+	    }
 
 	    return ServiceResult<bool>.Ok(true);
     }

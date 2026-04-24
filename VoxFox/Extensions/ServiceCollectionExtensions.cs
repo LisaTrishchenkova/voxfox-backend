@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using VoxFox.Interfaces;
 using VoxFox.Interfaces.Enrollment;
 using VoxFox.Interfaces.Lesson;
+using VoxFox.Interfaces.Notification;
 using VoxFox.Interfaces.Question;
 using VoxFox.Interfaces.Review;
 using VoxFox.Interfaces.Section;
@@ -41,6 +42,8 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<IReviewService, ReviewService>();
 		services.AddScoped<IQuestionRepository, QuestionRepository>();
 		services.AddScoped<IQuestionService, QuestionService>();
+		services.AddScoped<INotificationRepository, NotificationRepository>();
+		services.AddScoped<INotificationService, NotificationService>();
 
 		return services;
 	}
