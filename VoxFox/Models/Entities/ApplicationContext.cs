@@ -19,6 +19,7 @@ namespace VoxFox.Models.Entities
         public DbSet<LessonProgress> LessonProgresses { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -492,6 +493,41 @@ modelBuilder.Entity<Question>(entity =>
 		.WithMany()
 		.HasForeignKey(e => e.AnsweredById)
 		.IsRequired(false)
+		.OnDelete(DeleteBehavior.Restrict);
+});
+modelBuilder.Entity<Notification>(entity =>
+{
+	entity.HasKey(e => e.Id);
+
+	entity.Property(e => e.Id)
+		.HasColumnType("uuid")
+		.HasDefaultValueSql("gen_random_uuid()");
+
+	entity.Property(e => e.Title)
+		.IsRequired()
+		.HasMaxLength(200);
+
+	entity.Property(e => e.Message)
+		.IsRequired()
+		.HasMaxLength(1000);
+
+	entity.Property(e => e.Type)
+		.HasConversion<string>();
+
+	entity.Property(e => e.IsRead)
+		.HasDefaultValue(false);
+
+	entity.Property(e => e.RelatedEntityId)
+		.IsRequired(false);
+
+	entity.Property(e => e.CreatedAt)
+		.IsRequired()
+		.HasColumnType("timestamp with time zone")
+		.HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	entity.HasOne(e => e.User)
+		.WithMany()
+		.HasForeignKey(e => e.UserId)
 		.OnDelete(DeleteBehavior.Restrict);
 });
             base.OnModelCreating(modelBuilder);

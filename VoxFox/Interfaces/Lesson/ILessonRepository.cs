@@ -7,4 +7,5 @@ public interface ILessonRepository
     Task<Models.Entities.Lesson> UpdateAsync(Models.Entities.Lesson lesson);
     Task<bool> DeleteSoftAsync(Models.Entities.Lesson lesson);
     public Task<bool> SectionExistsAsync(Guid sectionId);
+    Task<Models.Entities.Lesson?> GetByIdWithSectionAsync(Guid id);
 }
