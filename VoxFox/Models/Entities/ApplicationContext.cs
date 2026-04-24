@@ -18,6 +18,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<LessonProgress> LessonProgresses { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<Question> Questions { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -447,7 +448,52 @@ modelBuilder.Entity<Review>(entity =>
 		.HasForeignKey(e => e.CourseId)
 		.OnDelete(DeleteBehavior.Restrict);
 });
+modelBuilder.Entity<Question>(entity =>
+{
+	entity.HasKey(e => e.Id);
 
+	entity.Property(e => e.Id)
+		.HasColumnType("uuid")
+		.HasDefaultValueSql("gen_random_uuid()");
+
+	entity.Property(e => e.Text)
+		.IsRequired()
+		.HasMaxLength(2000);
+
+	entity.Property(e => e.AnswerText)
+		.IsRequired(false)
+		.HasMaxLength(4000);
+
+	entity.Property(e => e.AnsweredAt)
+		.IsRequired(false)
+		.HasColumnType("timestamp with time zone");
+
+	entity.Property(e => e.CreatedAt)
+		.IsRequired()
+		.HasColumnType("timestamp with time zone")
+		.HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+	entity.Property(e => e.IsDeleted)
+		.HasDefaultValue(false);
+
+	entity.HasQueryFilter(e => !e.IsDeleted);
+
+	entity.HasOne(e => e.Lesson)
+		.WithMany()
+		.HasForeignKey(e => e.LessonId)
+		.OnDelete(DeleteBehavior.Restrict);
+
+	entity.HasOne(e => e.Author)
+		.WithMany()
+		.HasForeignKey(e => e.AuthorId)
+		.OnDelete(DeleteBehavior.Restrict);
+
+	entity.HasOne(e => e.AnsweredBy)
+		.WithMany()
+		.HasForeignKey(e => e.AnsweredById)
+		.IsRequired(false)
+		.OnDelete(DeleteBehavior.Restrict);
+});
             base.OnModelCreating(modelBuilder);
         }
 
