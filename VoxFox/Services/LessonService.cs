@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
+using VoxFox.Interfaces.Certificate;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Models;
 using VoxFox.Models.DTOs;
@@ -13,13 +14,16 @@ public class LessonService : ILessonService
 	private readonly ILogger<LessonService> _logger;
 	private readonly ILessonProgressRepository _progressRepository;
 	private readonly ApplicationContext _context;
+	private readonly ICertificateService _certificateService;
 
-	public LessonService(ILessonRepository lessonRepository, ILogger<LessonService> logger, ILessonProgressRepository progressRepository, ApplicationContext context)
+
+	public LessonService(ILessonRepository lessonRepository, ILogger<LessonService> logger, ILessonProgressRepository progressRepository, ApplicationContext context, ICertificateService certificateService)
 	{
 		_lessonRepository = lessonRepository;
 		_logger = logger;
 		_progressRepository = progressRepository;
 		_context = context;
+		_certificateService = certificateService;
 	}
 
 	public async Task<ServiceResult<LessonDto>> CreateLessonAsync(Guid sectionId, CreateLessonDto createLessonDto)
@@ -110,6 +114,21 @@ public async Task<ServiceResult<LessonProgressDto>> CompleteLessonAsync(Guid les
     }
 
     await _context.SaveChangesAsync();
+
+    if (enrollment.ProgressPercent >= 100)
+    {
+	    var course = await _context.Courses
+		    .FirstOrDefaultAsync(c => c.Id == enrollment.CourseId);
+
+	    if (course != null)
+	    {
+		    await _certificateService.IssueCertificateAsync(
+			    userId,
+			    enrollment.CourseId,
+			    enrollment.Id,
+			    course.CertificateEnabled);
+	    }
+    }
 
     return ServiceResult<LessonProgressDto>.Ok(new LessonProgressDto
     {
