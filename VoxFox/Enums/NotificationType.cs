@@ -5,5 +5,6 @@ public enum NotificationType
 	CourseApproved,
 	CourseRejected,
 	NewQuestion,
-	QuestionAnswered
+	QuestionAnswered,
+	CertificateIssued
 }

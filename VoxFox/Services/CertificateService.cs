@@ -46,11 +46,12 @@ public class CertificateService : ICertificateService
         var created = await _certificateRepository.AddAsync(certificate);
 
         await _notificationService.SendAsync(
-            userId,
-            "Сертификат получен",
-            "Поздравляем! Вы успешно завершили курс и получили сертификат.",
-            NotificationType.CourseApproved,
-            created.Id);
+	        userId,
+	        "Сертификат получен",
+	        "Поздравляем! Вы успешно завершили курс и получили сертификат.",
+	        NotificationType.CertificateIssued,
+	        relatedEntityId: created.Id,
+	        relatedCourseId: courseId);
 
         return created;
     }
