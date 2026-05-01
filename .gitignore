@@ -399,3 +399,5 @@ FodyWeavers.xsd
 /.idea
 
 #test
+/VoxFox/wwwroot
+/VoxFox/wwwroot

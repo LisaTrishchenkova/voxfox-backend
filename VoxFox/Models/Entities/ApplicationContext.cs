@@ -521,6 +521,9 @@ modelBuilder.Entity<Notification>(entity =>
 	entity.Property(e => e.RelatedEntityId)
 		.IsRequired(false);
 
+	entity.Property(e => e.RelatedCourseId)
+		.IsRequired(false);
+
 	entity.Property(e => e.CreatedAt)
 		.IsRequired()
 		.HasColumnType("timestamp with time zone")

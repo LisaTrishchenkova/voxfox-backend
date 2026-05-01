@@ -473,7 +473,8 @@ public class CourseService : ICourseService
 			    "Курс одобрен",
 			    $"Ваш курс «{course.Title}» прошёл модерацию и опубликован",
 			    NotificationType.CourseApproved,
-			    course.Id);
+			    relatedEntityId: course.Id,
+			    relatedCourseId: course.Id);
 	    }
 
 	    return ServiceResult<bool>.Ok(true);
@@ -504,7 +505,8 @@ public class CourseService : ICourseService
 			    "Курс отклонён",
 			    $"Ваш курс «{course.Title}» отклонён модератором.{(string.IsNullOrWhiteSpace(reason) ? "" : $" Причина: {reason}")}",
 			    NotificationType.CourseRejected,
-			    course.Id);
+			    relatedEntityId: course.Id,
+			    relatedCourseId: course.Id);
 	    }
 
 	    return ServiceResult<bool>.Ok(true);
