@@ -9,6 +9,6 @@ public interface INotificationService
 	Task<ServiceResult<bool>> MarkAsReadAsync(Guid notificationId, Guid userId);
 	Task<ServiceResult<bool>> MarkAllAsReadAsync(Guid userId);
 	Task<ServiceResult<int>> GetUnreadCountAsync(Guid userId);
-	System.Threading.Tasks.Task SendAsync(Guid userId, string title, string message,
-		NotificationType type, Guid? relatedEntityId = null);
+	System.Threading.Tasks.Task SendAsync(Guid userId, string title, string message, NotificationType type,
+		Guid? relatedEntityId = null, Guid? relatedCourseId = null);
 }

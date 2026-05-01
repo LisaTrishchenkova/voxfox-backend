@@ -18,6 +18,9 @@ public class QuestionRepository : IQuestionRepository
 	public async Task<Question?> GetByIdAsync(Guid id)
 	{
 		var question = await _context.Questions
+			.Include(q => q.Lesson)
+			.ThenInclude(l => l.Section)
+			.ThenInclude(s => s.Course)
 			.Include(q => q.Author)
 			.Include(q => q.AnsweredBy)
 			.FirstOrDefaultAsync(q => q.Id == id);
