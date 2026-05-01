@@ -47,6 +47,7 @@ public class QuestionService : IQuestionService
 
 		// уведомляем учителя курса если он не тот же пользователь
 		var courseAuthorId = lesson.Section?.Course?.AuthorId;
+		var courseId = lesson.Section?.Course?.Id;
 		if (courseAuthorId.HasValue && courseAuthorId.Value != userId)
 		{
 			await _notificationService.SendAsync(
@@ -54,7 +55,8 @@ public class QuestionService : IQuestionService
 				"Новый вопрос к уроку",
 				$"Студент задал вопрос в уроке «{lesson.Title}»",
 				NotificationType.NewQuestion,
-				created.Id);
+				relatedEntityId: created.Id,
+				relatedCourseId: courseId);
 		}
 
 		return ServiceResult<QuestionDto>.Ok(MapToDto(full!));
@@ -93,12 +95,14 @@ public class QuestionService : IQuestionService
 		var updated = await _questionRepository.UpdateAsync(question);
 		var full = await _questionRepository.GetByIdAsync(updated.Id);
 
+		var courseId = full?.Lesson?.Section?.Course?.Id;
 		await _notificationService.SendAsync(
 			question.AuthorId,
 			"Ответ на ваш вопрос",
 			$"Преподаватель ответил на ваш вопрос в уроке",
 			NotificationType.QuestionAnswered,
-			question.Id);
+			relatedEntityId: question.Id,
+			relatedCourseId: courseId);
 
 		return ServiceResult<QuestionDto>.Ok(MapToDto(full!));
 	}

@@ -11,6 +11,7 @@ public class Notification
 	public NotificationType Type { get; set; }
 	public bool IsRead { get; set; } = false;
 	public Guid? RelatedEntityId { get; set; }
+	public Guid? RelatedCourseId { get; set; }
 	public DateTime CreatedAt { get; set; }
 
 	public User? User { get; set; }

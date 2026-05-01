@@ -8,6 +8,8 @@ public class NotificationDto
 	public string Title { get; set; } = null!;
 	public string Message { get; set; } = null!;
 	public NotificationType Type { get; set; }
+
+	public Guid? RelatedCourseId { get; set; }
 	public bool IsRead { get; set; }
 	public Guid? RelatedEntityId { get; set; }
 	public DateTime CreatedAt { get; set; }

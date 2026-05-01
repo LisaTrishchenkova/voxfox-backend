@@ -46,6 +46,22 @@ public class NotificationService : INotificationService
 		return ServiceResult<int>.Ok(count);
 	}
 
+	public async Task SendAsync(Guid userId, string title, string message, NotificationType type, Guid? relatedEntityId = null,
+		Guid? relatedCourseId = null)
+	{
+		var notification = new Notification
+		{
+			UserId = userId,
+			Title = title,
+			Message = message,
+			Type = type,
+			RelatedEntityId = relatedEntityId,
+			RelatedCourseId = relatedCourseId,
+			CreatedAt = DateTime.UtcNow
+		};
+		await _notificationRepository.AddAsync(notification);
+	}
+
 	public async Task SendAsync(Guid userId, string title, string message, NotificationType type, Guid? relatedEntityId = null)
 	{
 		var notification = new Notification
@@ -68,6 +84,7 @@ public class NotificationService : INotificationService
 		Type = n.Type,
 		IsRead = n.IsRead,
 		RelatedEntityId = n.RelatedEntityId,
+		RelatedCourseId = n.RelatedCourseId,
 		CreatedAt = n.CreatedAt
 	};
 }
