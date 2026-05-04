@@ -52,6 +52,8 @@ public class EnrollmentService : IEnrollmentService
 
         var created = await _enrollmentRepository.AddAsync(enrollment);
 
+        await _courseRepository.UpdateEnrollmentCountAsync(courseId);
+
         var favorite = await _favoriteRepository.GetByUserAndCourseAsync(userId, courseId);
         if (favorite != null)
 	        await _favoriteRepository.DeleteAsync(favorite);
@@ -78,6 +80,10 @@ public class EnrollmentService : IEnrollmentService
             return ServiceResult<bool>.Fail(
                 "Нельзя отменить завершённый курс"
             );
+
+        var courseId = enrollment.CourseId;
+        await _enrollmentRepository.DeleteAsync(enrollment);
+        await _courseRepository.UpdateEnrollmentCountAsync(courseId);
 
         await _enrollmentRepository.DeleteAsync(enrollment);
         return ServiceResult<bool>.Ok(true);
@@ -165,5 +171,7 @@ public class EnrollmentService : IEnrollmentService
                 CreatedAt = enrollment.Course.CreatedAt
             }
         };
+
+
     }
 }
