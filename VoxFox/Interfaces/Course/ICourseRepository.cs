@@ -15,6 +15,8 @@ public interface ICourseRepository
     Task<IList<Models.Entities.Section>> GetSectionsByCourseIdAsync(Guid courseId);
     Task<IList<Models.Entities.Course>> GetByAuthorIdAsync(Guid userId, CourseStatus? status = null);
 
+    System.Threading.Tasks.Task UpdateEnrollmentCountAsync(Guid courseId);
+
 	IQueryable<Course> GetCoursesQuery();
 	IQueryable<Course> GetPublishedCoursesQuery();
 
