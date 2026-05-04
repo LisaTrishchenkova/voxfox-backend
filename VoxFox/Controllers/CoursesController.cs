@@ -94,21 +94,6 @@ public class CoursesController : ControllerBase
 		var result = await _courseService.GetPendingCoursesAsync(page, pageSize);
 		return Ok(result);
 	}
-	// [HttpPut("{id}/publish")]
-	// [ProducesResponseType(StatusCodes.Status204NoContent)]
-	// [ProducesResponseType(StatusCodes.Status404NotFound)]
-	// [ProducesResponseType(StatusCodes.Status400BadRequest)]
-	// public async Task<ActionResult> PublishCourse([FromRoute] Guid id)
-	// {
-	//     var result = await _courseService.PublishCourseAsync(id);
-	//
-	//     if (!result.Success)
-	//     {
-	//         return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
-	//     }
-	//
-	//     return NoContent();
-	// }
 
 	[HttpPost]
 	[Authorize(Roles = "Teacher,Admin")]
@@ -230,7 +215,7 @@ public class CoursesController : ControllerBase
 	}
 
 	[HttpPut("{id}/moderate")]
-	[Authorize(Roles = "Moderator,Admin")]
+	[Authorize(Roles = "Teacher,Admin,Moderator")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status404NotFound)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]

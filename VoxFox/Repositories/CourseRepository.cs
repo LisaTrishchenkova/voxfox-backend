@@ -154,6 +154,26 @@ public class CourseRepository : ICourseRepository
 		}
 	}
 
+	public async Task UpdateEnrollmentCountAsync(Guid courseId)
+	{
+		try
+		{
+			var totalCount = await _context.Enrollments
+				.CountAsync(e => e.CourseId == courseId);
+
+			await _context.Courses
+				.Where(c => c.Id == courseId)
+				.ExecuteUpdateAsync(setters => setters
+					.SetProperty(c => c.EnrollmentCount, totalCount)
+					.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+		}
+		catch (System.Exception ex)
+		{
+			_logger.LogError(ex, "Ошибка при обновлении EnrollmentCount для курса {CourseId}", courseId);
+			throw;
+		}
+	}
+
 	public IQueryable<Course> GetCoursesQuery()
 	{
 		return _context.Courses
