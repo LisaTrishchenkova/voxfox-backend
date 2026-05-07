@@ -40,6 +40,16 @@ namespace VoxFox.Controllers
             {
                 return NotFound("Email или пароль неверный");
             }
+
+            if (user.IsDeleted)
+	            return Unauthorized("Аккаунт удалён");
+
+            if (user.IsBlocked)
+	            return StatusCode(403, new {
+		            error = "Аккаунт заблокирован",
+		            reason = user.BlockReason
+	            });
+
             var claims = _jwtService.CreateClaims(user.Id, request.Email, user.Role);
             var accessToken = _jwtService.GenerateAccessToken(claims);
             var loginResponse = new LoginResponse
