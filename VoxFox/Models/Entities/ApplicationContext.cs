@@ -86,6 +86,14 @@ namespace VoxFox.Models.Entities
 	            entity.Property(e => e.IsDeleted)
 		            .HasDefaultValue(false);
 	            entity.HasQueryFilter(e => !e.IsDeleted);
+	            entity.Property(e => e.IsBlocked)
+		            .HasDefaultValue(false);
+	            entity.Property(e => e.BlockedAt)
+		            .IsRequired(false)
+		            .HasColumnType("timestamp with time zone");
+	            entity.Property(e => e.BlockReason)
+		            .IsRequired(false)
+		            .HasMaxLength(500);
             });
             modelBuilder.Entity<Course>(entity =>
             {
@@ -138,6 +146,16 @@ namespace VoxFox.Models.Entities
 	                .HasColumnType("timestamp with time zone")
 	                .HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.HasQueryFilter(c => !c.IsDeleted);
+                entity.Property(e => e.ReviewerId).IsRequired(false);
+                entity.Property(e => e.ReviewStartedAt).IsRequired(false).HasColumnType("timestamp with time zone");
+                entity.Property(e => e.ReviewCount).HasDefaultValue(0);
+
+                modelBuilder.Entity<Course>()
+	                .HasOne(c => c.Reviewer)
+	                .WithMany()
+	                .HasForeignKey(c => c.ReviewerId)
+	                .IsRequired(false)
+	                .OnDelete(DeleteBehavior.SetNull);
             }
             );
 

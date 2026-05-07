@@ -68,13 +68,13 @@ public class CourseService : ICourseService
         return MapToDo(createdCourse);
     }
 
-    public async Task<bool> DeleteCourseAsync(Guid id, Guid userId)
+    public async Task<bool> DeleteCourseAsync(Guid id, Guid userId, bool isAdmin = false)
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
             return false;
 
-        if (course.AuthorId != userId)
+        if (!isAdmin && course.AuthorId != userId)
 	        return false;
 
         var isSuccess = await _courseRepository.DeleteSoftAsync(course);

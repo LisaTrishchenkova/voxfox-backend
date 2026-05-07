@@ -13,6 +13,9 @@ namespace VoxFox.Models.Entities
         public string? Bio { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsDeleted { get; set; } = false;
+        public bool IsBlocked { get; set; } = false;
+        public DateTime? BlockedAt { get; set; }
+        public string? BlockReason { get; set; }
 
         public ICollection<Course> Courses { get; set; } = [];
     }
