@@ -17,6 +17,10 @@ namespace VoxFox.Models.Entities
         public int DurationMinutes { get; set; } = 0;
         public bool IsDeleted { get; set; } = false;
         public CourseStatus Status { get; set; }
+        public Guid? ReviewerId { get; set; }
+        public User? Reviewer { get; set; }
+        public DateTime? ReviewStartedAt { get; set; }
+        public int ReviewCount { get; set; } = 0;
         public Guid? CategoryId { get; set; }
 
         public Guid? AuthorId { get; set; }

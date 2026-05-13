@@ -30,7 +30,7 @@ public class TasksController : ControllerBase
 	}
 
 	[HttpPost("api/lessons/{lessonId}/tasks/single-choice")]
-	[Authorize(Roles = "Teacher,Admin")]
+	[Authorize(Roles = "Teacher,Admin,Moderator")]
 	[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TaskTeacherDto))]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]
 	public async Task<ActionResult<TaskTeacherDto>> CreateSingleChoiceTask(
@@ -62,7 +62,7 @@ public class TasksController : ControllerBase
 	}
 
 	[HttpPost("api/lessons/{lessonId}/tasks/multi-choice")]
-	[Authorize(Roles = "Teacher,Admin")]
+	[Authorize(Roles = "Teacher,Admin,Moderator")]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TaskTeacherDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TaskTeacherDto>> CreateMultiChoiceTask(
@@ -94,7 +94,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost("api/lessons/{lessonId}/tasks/text-input")]
-    [Authorize(Roles = "Teacher,Admin")]
+    [Authorize(Roles = "Teacher,Admin,Moderator")]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TaskTeacherDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TaskTeacherDto>> CreateTextInputTask(

@@ -1,10 +1,13 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using VoxFox.Features;
 using VoxFox.Interfaces;
+using VoxFox.Interfaces.Admin;
 using VoxFox.Interfaces.Certificate;
 using VoxFox.Interfaces.Enrollment;
 using VoxFox.Interfaces.Lesson;
+using VoxFox.Interfaces.Moderation;
 using VoxFox.Interfaces.Notification;
 using VoxFox.Interfaces.Question;
 using VoxFox.Interfaces.Review;
@@ -47,6 +50,9 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<INotificationService, NotificationService>();
 		services.AddScoped<ICertificateRepository, CertificateRepository>();
 		services.AddScoped<ICertificateService, CertificateService>();
+		services.AddScoped<IAdminService, AdminService>();
+		services.AddScoped<IModerationService, ModerationService>();
+		services.AddHostedService<ModerationCleanupJob>();
 
 		return services;
 	}
