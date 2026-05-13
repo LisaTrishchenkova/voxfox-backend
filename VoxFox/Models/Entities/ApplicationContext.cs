@@ -87,14 +87,6 @@ namespace VoxFox.Models.Entities
 				entity.Property(e => e.IsDeleted)
 					.HasDefaultValue(false);
 				entity.HasQueryFilter(e => !e.IsDeleted);
-				entity.Property(e => e.IsBlocked)
-					.HasDefaultValue(false);
-				entity.Property(e => e.BlockedAt)
-					.IsRequired(false)
-					.HasColumnType("timestamp with time zone");
-				entity.Property(e => e.BlockReason)
-					.IsRequired(false)
-					.HasMaxLength(500);
 			});
 			modelBuilder.Entity<Course>(entity =>
 			{
