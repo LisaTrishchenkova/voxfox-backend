@@ -96,7 +96,7 @@ public class CoursesController : ControllerBase
 	}
 
 	[HttpPost]
-	[Authorize(Roles = "Teacher,Admin")]
+	[Authorize(Roles = "Teacher,Admin,Moderator")]
 	public async Task<ActionResult<CourseDto>> CreateCourse(
 		CreateCourseDto createCourseDto
 	)
@@ -148,7 +148,8 @@ public class CoursesController : ControllerBase
 		var userId = User.GetUserId();
 		if (userId == null)
 			return Unauthorized();
-		var resultDeleted = await _courseService.DeleteCourseAsync(id, userId.Value);
+		var isAdmin = User.IsInRole("Admin");
+		var resultDeleted = await _courseService.DeleteCourseAsync(id, userId.Value, isAdmin);
 		if (!resultDeleted)
 			return NotFound($"Не удалось удалить курс по id: {id}");
 
@@ -156,7 +157,7 @@ public class CoursesController : ControllerBase
 	}
 
 	[HttpPut("{id}")]
-	[Authorize(Roles = "Teacher,Admin")]
+	[Authorize(Roles = "Teacher,Admin,Moderator")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status404NotFound)]
 	public async Task<ActionResult<CourseDto>> UpdateCourse(

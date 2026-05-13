@@ -223,7 +223,11 @@ public class CourseRepository : ICourseRepository
 					Name = c.Author.Name
 				},
 				PublishedAt = c.PublishedAt,
-				CreatedAt = c.CreatedAt
+				CreatedAt = c.CreatedAt,
+				ReviewerId = c.ReviewerId,
+				ReviewerName = c.Reviewer != null ? c.Reviewer.Name : null,
+				ReviewStartedAt = c.ReviewStartedAt,
+				ReviewCount = c.ReviewCount
 			})
 			.ToListAsync();
 	}
@@ -255,6 +259,7 @@ public class CourseRepository : ICourseRepository
 			.Where(c => c.Status == CourseStatus.UnderReview && !c.IsDeleted)
 			.Include(c => c.Author)
 			.Include(c => c.Tags)
+			.Include(c => c.Reviewer)
 			.OrderBy(c => c.UpdatedAt)
 			.AsQueryable();
 

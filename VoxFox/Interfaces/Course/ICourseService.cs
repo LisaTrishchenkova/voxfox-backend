@@ -12,7 +12,7 @@ public interface ICourseService
     Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto, Guid authorId);
     Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto, Guid userId);
     Task<ServiceResult<IList<SectionDto>>> GetSectionsByCourseIdAsync(Guid courseId);
-    Task<bool> DeleteCourseAsync(Guid id, Guid userId);
+    Task<bool> DeleteCourseAsync(Guid id, Guid userId, bool isAdmin);
     Task<PaginatedResponse<CourseDto>> SearchAsync(CourseSearchRequest request);
     Task<ServiceResult<bool>> PublishCourseAsync(Guid id);
     Task<ServiceResult<IList<CourseDto>>> GetMyCoursesAsync(Guid userId, CourseStatus? status = null);
