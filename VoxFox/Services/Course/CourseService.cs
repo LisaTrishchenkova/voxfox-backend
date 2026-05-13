@@ -464,6 +464,20 @@ public class CourseService : ICourseService
 	    course.Status = CourseStatus.Published;
 	    course.PublishedAt = DateTime.UtcNow;
 	    course.UpdatedAt = DateTime.UtcNow;
+
+	    if (course.ReviewerId.HasValue)
+	    {
+		    _context.CourseReviewHistories.Add(new CourseReviewHistory
+		    {
+			    CourseId = course.Id,
+			    ModeratorId = course.ReviewerId.Value,
+			    Decision = ReviewDecision.Approved,
+			    ReviewedAt = DateTime.UtcNow,
+		    });
+	    }
+	    course.ReviewerId = null;
+	    course.ReviewStartedAt = null;
+
 	    await _courseRepository.UpdateAsync(course);
 
 	    if (course.AuthorId.HasValue)
@@ -496,6 +510,21 @@ public class CourseService : ICourseService
 
 	    course.Status = CourseStatus.RejectedByModerator;
 	    course.UpdatedAt = DateTime.UtcNow;
+
+	    if (course.ReviewerId.HasValue)
+	    {
+		    _context.CourseReviewHistories.Add(new CourseReviewHistory
+		    {
+			    CourseId = course.Id,
+			    ModeratorId = course.ReviewerId.Value,
+			    Decision = ReviewDecision.Rejected,
+			    Reason = reason,
+			    ReviewedAt = DateTime.UtcNow,
+		    });
+	    }
+	    course.ReviewerId = null;
+	    course.ReviewStartedAt = null;
+
 	    await _courseRepository.UpdateAsync(course);
 
 	    if (course.AuthorId.HasValue)

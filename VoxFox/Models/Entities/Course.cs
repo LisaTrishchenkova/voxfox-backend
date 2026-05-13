@@ -29,6 +29,11 @@ namespace VoxFox.Models.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
+        public Guid? ReviewerId { get; set; }
+        public User? Reviewer { get; set; }
+        public DateTime? ReviewStartedAt { get; set; }
+        public int ReviewCount { get; set; } = 0;
+
         public ICollection<Tag>? Tags { get; set; } = null!;
         public ICollection<Section> Sections { get; set; } = null!;
         public Category? Category { get; set; } = null!;
