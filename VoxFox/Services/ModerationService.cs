@@ -103,21 +103,27 @@ public class ModerationService : IModerationService
 
     public async Task<ModeratorStatsDto> GetMyStatsAsync(Guid moderatorId)
     {
-        var moderator = await _context.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == moderatorId);
+	    var moderator = await _context.Users.IgnoreQueryFilters()
+		    .FirstOrDefaultAsync(u => u.Id == moderatorId);
 
-        var currentlyReviewing = await _context.Courses.IgnoreQueryFilters()
-            .CountAsync(c => c.ReviewerId == moderatorId && c.Status == CourseStatus.UnderReview);
+	    var currentlyReviewing = await _context.Courses.IgnoreQueryFilters()
+		    .CountAsync(c => c.ReviewerId == moderatorId && c.Status == CourseStatus.UnderReview);
 
-        return new ModeratorStatsDto
-        {
-            ModeratorId = moderatorId,
-            ModeratorName = moderator?.Name ?? "—",
-            CurrentlyReviewing = currentlyReviewing,
-            TotalReviewed = 0,
-            TotalApproved = 0,
-            TotalRejected = 0,
-        };
+	    var totalApproved = await _context.CourseReviewHistories
+		    .CountAsync(h => h.ModeratorId == moderatorId && h.Decision == ReviewDecision.Approved);
+
+	    var totalRejected = await _context.CourseReviewHistories
+		    .CountAsync(h => h.ModeratorId == moderatorId && h.Decision == ReviewDecision.Rejected);
+
+	    return new ModeratorStatsDto
+	    {
+		    ModeratorId = moderatorId,
+		    ModeratorName = moderator?.Name ?? "—",
+		    CurrentlyReviewing = currentlyReviewing,
+		    TotalReviewed = totalApproved + totalRejected,
+		    TotalApproved = totalApproved,
+		    TotalRejected = totalRejected,
+	    };
     }
 
     public async Task ReleaseStaleClaimsAsync(TimeSpan timeout)

@@ -25,7 +25,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserResponse))]
         public async Task<IActionResult> GetUserById(
             [FromRoute] Guid id
@@ -33,13 +33,7 @@ namespace VoxFox.Controllers
         {
 	        var currentUserRole = User.GetUserRole();
 
-	        // админ видит всех включая удалённых
-	        var user = currentUserRole == UserRole.Admin
-		        ? await _context.Users
-			        .IgnoreQueryFilters()
-			        .FirstOrDefaultAsync(u => u.Id == id)
-		        : await _context.Users
-			        .FirstOrDefaultAsync(u => u.Id == id);
+	        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
 
 	        if (user == null)
 		        return NotFound("Пользователь не найден");
@@ -55,7 +49,7 @@ namespace VoxFox.Controllers
 		        CreatedAt = user.CreatedAt,
 		        IsDeleted = user.IsDeleted
 	        };
-            return Ok(userResponse);
+	        return Ok(userResponse);
         }
 
         [HttpGet]
@@ -185,7 +179,7 @@ namespace VoxFox.Controllers
         }
 
         [HttpGet("{id}/courses")]
-        [Authorize]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUserCourses([FromRoute] Guid id)
@@ -194,11 +188,9 @@ namespace VoxFox.Controllers
 	        if (user == null)
 		        return NotFound(new { error = "Пользователь не найден" });
 
-	        var currentUserId = User.GetUserId();
-	        var currentUserRole = User.GetUserRole();
+	        var currentUserId = User.GetUserId(); // null если аноним
+	        var currentUserRole = User.GetUserRole(); // null если аноним
 
-	        // сам автор, админ и модератор видят все курсы включая черновики
-	        // остальные — только опубликованные
 	        var isPrivileged = currentUserId == id ||
 	                           currentUserRole == UserRole.Admin ||
 	                           currentUserRole == UserRole.Moderator;
@@ -210,17 +202,30 @@ namespace VoxFox.Controllers
 		        query = query.Where(c => c.Status == CourseStatus.Published);
 
 	        var courses = await query
+		        .Include(c => c.Author)
+		        .Include(c => c.Tags)
 		        .OrderByDescending(c => c.CreatedAt)
 		        .Select(c => new CourseDto
 		        {
 			        Id = c.Id,
 			        Title = c.Title,
 			        Description = c.Description,
+			        FullDescription = c.FullDescription,
 			        Status = c.Status,
 			        Level = c.Level,
 			        CoverImageUrl = c.CoverImageUrl,
 			        Price = c.Price,
-			        CreatedAt = c.CreatedAt
+			        CertificateEnabled = c.CertificateEnabled,
+			        EnrollmentCount = c.EnrollmentCount,
+			        Rating = c.Rating,
+			        DurationMinutes = c.DurationMinutes,
+			        CategoryId = c.CategoryId,
+			        CreatedAt = c.CreatedAt,
+			        PublishedAt = c.PublishedAt,
+			        Author = new AuthorDto { Id = c.Author!.Id, Name = c.Author.Name },
+			        Tags = c.Tags != null
+				        ? c.Tags.Select(t => new TagDto { Name = t.Name }).ToList()
+				        : new List<TagDto>()
 		        })
 		        .ToListAsync();
 
@@ -228,7 +233,6 @@ namespace VoxFox.Controllers
         }
 
         [HttpGet("{id}/stats")]
-        [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserStatsDto))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUserStats([FromRoute] Guid id)
