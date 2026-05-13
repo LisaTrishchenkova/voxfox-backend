@@ -86,6 +86,7 @@ public class CourseRepository : ICourseRepository
 			var course = await _context.Courses
 				.Include(c => c.Tags)
 				.Include(c => c.Author)
+				.Include(c => c.Reviewer)
 				.FirstOrDefaultAsync(c => c.Id == id);
 
 			return course;
