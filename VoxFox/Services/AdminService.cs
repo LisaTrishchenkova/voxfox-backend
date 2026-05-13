@@ -84,31 +84,35 @@ public class AdminService : IAdminService
 
     public async Task<IList<ModeratorStatsDto>> GetModeratorsStatsAsync()
     {
-        var moderators = await _context.Users.IgnoreQueryFilters()
-            .Where(u => u.Role == UserRole.Moderator && !u.IsDeleted)
-            .ToListAsync();
+	    var moderators = await _context.Users.IgnoreQueryFilters()
+		    .Where(u => u.Role == UserRole.Moderator && !u.IsDeleted)
+		    .ToListAsync();
 
-        var result = new List<ModeratorStatsDto>();
+	    var result = new List<ModeratorStatsDto>();
 
-        foreach (var mod in moderators)
-        {
-            var currentlyReviewing = await _context.Courses.IgnoreQueryFilters()
-                .CountAsync(c => c.ReviewerId == mod.Id && c.Status == CourseStatus.UnderReview);
+	    foreach (var mod in moderators)
+	    {
+		    var currentlyReviewing = await _context.Courses.IgnoreQueryFilters()
+			    .CountAsync(c => c.ReviewerId == mod.Id && c.Status == CourseStatus.UnderReview);
 
-            result.Add(new ModeratorStatsDto
-            {
-                ModeratorId = mod.Id,
-                ModeratorName = mod.Name,
-                CurrentlyReviewing = currentlyReviewing,
-                // TotalReviewed/Approved/Rejected требуют отдельной таблицы истории
-                // оставляем 0 пока нет ReviewHistory
-                TotalReviewed = 0,
-                TotalApproved = 0,
-                TotalRejected = 0,
-            });
-        }
+		    var totalApproved = await _context.CourseReviewHistories
+			    .CountAsync(h => h.ModeratorId == mod.Id && h.Decision == ReviewDecision.Approved);
 
-        return result;
+		    var totalRejected = await _context.CourseReviewHistories
+			    .CountAsync(h => h.ModeratorId == mod.Id && h.Decision == ReviewDecision.Rejected);
+
+		    result.Add(new ModeratorStatsDto
+		    {
+			    ModeratorId = mod.Id,
+			    ModeratorName = mod.Name,
+			    CurrentlyReviewing = currentlyReviewing,
+			    TotalReviewed = totalApproved + totalRejected,
+			    TotalApproved = totalApproved,
+			    TotalRejected = totalRejected,
+		    });
+	    }
+
+	    return result;
     }
 
     public async Task<ServiceResult<bool>> BlockUserAsync(Guid userId, string? reason)
