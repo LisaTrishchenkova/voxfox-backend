@@ -12,7 +12,7 @@ using VoxFox.Models.Entities;
 namespace VoxFox.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    [Migration("20260513102751_AddCourseReviewHistory")]
+    [Migration("20260513113740_AddCourseReviewHistory")]
     partial class AddCourseReviewHistory
     {
         /// <inheritdoc />
@@ -272,6 +272,17 @@ namespace VoxFox.Migrations
                         .HasColumnType("numeric(3,2)")
                         .HasDefaultValue(0m);
 
+                    b.Property<int>("ReviewCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("ReviewStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -293,6 +304,8 @@ namespace VoxFox.Migrations
                     b.HasIndex("AuthorId");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("ReviewerId");
 
                     b.ToTable("Courses");
                 });
@@ -667,6 +680,12 @@ namespace VoxFox.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("BlockReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("BlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -676,6 +695,9 @@ namespace VoxFox.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -775,9 +797,16 @@ namespace VoxFox.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("VoxFox.Models.Entities.User", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Author");
 
                     b.Navigation("Category");
+
+                    b.Navigation("Reviewer");
                 });
 
             modelBuilder.Entity("VoxFox.Models.Entities.CourseReviewHistory", b =>

@@ -678,8 +678,7 @@ namespace VoxFox.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("BlockReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("BlockedAt")
                         .HasColumnType("timestamp with time zone");
@@ -695,9 +694,7 @@ namespace VoxFox.Migrations
                         .HasColumnType("character varying(150)");
 
                     b.Property<bool>("IsBlocked")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()

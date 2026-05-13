@@ -11,6 +11,25 @@ namespace VoxFox.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterColumn<bool>(
+                name: "IsBlocked",
+                table: "Users",
+                type: "boolean",
+                nullable: false,
+                oldClrType: typeof(bool),
+                oldType: "boolean",
+                oldDefaultValue: false);
+
+            migrationBuilder.AlterColumn<string>(
+                name: "BlockReason",
+                table: "Users",
+                type: "text",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "character varying(500)",
+                oldMaxLength: 500,
+                oldNullable: true);
+
             migrationBuilder.CreateTable(
                 name: "CourseReviewHistories",
                 columns: table => new
@@ -55,6 +74,25 @@ namespace VoxFox.Migrations
         {
             migrationBuilder.DropTable(
                 name: "CourseReviewHistories");
+
+            migrationBuilder.AlterColumn<bool>(
+                name: "IsBlocked",
+                table: "Users",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false,
+                oldClrType: typeof(bool),
+                oldType: "boolean");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "BlockReason",
+                table: "Users",
+                type: "character varying(500)",
+                maxLength: 500,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "text",
+                oldNullable: true);
         }
     }
 }
