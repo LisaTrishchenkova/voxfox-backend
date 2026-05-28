@@ -5,6 +5,7 @@ using VoxFox.Features;
 using VoxFox.Interfaces;
 using VoxFox.Interfaces.Admin;
 using VoxFox.Interfaces.Certificate;
+using VoxFox.Interfaces.DraftCourse;
 using VoxFox.Interfaces.Enrollment;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Interfaces.Moderation;
@@ -53,7 +54,8 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<IAdminService, AdminService>();
 		services.AddScoped<IModerationService, ModerationService>();
 		services.AddHostedService<ModerationCleanupJob>();
-
+		services.AddScoped<ICourseDraftRepository, CourseDraftRepository>();
+		services.AddScoped<ICourseDraftService, CourseDraftService>();
 		return services;
 	}
 

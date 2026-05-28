@@ -10,6 +10,7 @@ namespace VoxFox.Models.Entities
         public string Description { get; set; } = null!;
         public bool IsDeleted { get; set; } = false;
         public Guid CourseId { get; init; }
+        public int OrderIndex { get; set; } = 0;
 
         // ReSharper disable once PropertyCanBeMadeInitOnly.Global
         public Course Course { get; set; } = null!;

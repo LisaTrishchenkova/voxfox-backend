@@ -390,5 +390,52 @@ namespace VoxFox.Controllers
 
 	        return NoContent();
         }
+
+        [HttpGet("teachers")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetTeachers(
+	        [FromQuery] string? search,
+	        [FromQuery] int page = 1,
+	        [FromQuery] int pageSize = 12)
+        {
+	        var query = _context.Users
+		        .Where(u => u.Role == UserRole.Teacher && !u.IsDeleted)
+		        .AsQueryable();
+
+	        if (!string.IsNullOrWhiteSpace(search))
+		        query = query.Where(u => u.Name.Contains(search));
+
+	        var totalCount = await query.CountAsync();
+
+	        var teachers = await query
+		        .OrderByDescending(u => u.Courses.Count(c =>
+			        !c.IsDeleted && c.Status == CourseStatus.Published))
+		        .Skip((page - 1) * pageSize)
+		        .Take(pageSize)
+		        .Select(u => new
+		        {
+			        u.Id,
+			        u.Name,
+			        u.AvatarUrl,
+			        u.Bio,
+			        u.CreatedAt,
+			        PublishedCoursesCount = u.Courses.Count(c =>
+				        !c.IsDeleted && c.Status == CourseStatus.Published),
+			        TotalStudents = u.Courses
+				        .Where(c => !c.IsDeleted && c.Status == CourseStatus.Published)
+				        .Sum(c => c.EnrollmentCount),
+		        })
+		        .ToListAsync();
+
+	        return Ok(new
+	        {
+		        items = teachers,
+		        totalCount,
+		        currentPage = page,
+		        totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+		        pageSize
+	        });
+        }
     }
 }
