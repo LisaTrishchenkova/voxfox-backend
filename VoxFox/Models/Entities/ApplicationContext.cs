@@ -22,6 +22,11 @@ namespace VoxFox.Models.Entities
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
         public DbSet<CourseReviewHistory> CourseReviewHistories { get; set; }
+        public DbSet<CourseDraft> CourseDrafts { get; set; }
+        public DbSet<DraftSection> DraftSections { get; set; }
+        public DbSet<DraftLesson> DraftLessons { get; set; }
+        public DbSet<DraftTask> DraftTasks { get; set; }
+        public DbSet<DraftTag> DraftTags { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -586,6 +591,72 @@ namespace VoxFox.Models.Entities
                     .HasForeignKey(e => e.EnrollmentId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+            modelBuilder.Entity<CourseDraft>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Id).HasColumnType("uuid").HasDefaultValueSql("gen_random_uuid()");
+    entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+    entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+    entity.Property(e => e.FullDescription).IsRequired(false);
+    entity.Property(e => e.CoverImageUrl).IsRequired(false).HasMaxLength(500);
+    entity.Property(e => e.Price).HasColumnType("numeric(10,2)").HasDefaultValue(0);
+    entity.Property(e => e.Level).HasConversion<string>().HasDefaultValue(CourseLevel.Beginner);
+    entity.Property(e => e.CertificateEnabled).HasDefaultValue(false);
+    entity.Property(e => e.Status).HasConversion<string>().HasDefaultValue(DraftStatus.Draft);
+    entity.Property(e => e.CreatedAt).IsRequired().HasColumnType("timestamp with time zone");
+    entity.Property(e => e.UpdatedAt).IsRequired().HasColumnType("timestamp with time zone");
+    entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Cascade);
+    entity.HasOne(e => e.Author).WithMany().HasForeignKey(e => e.AuthorId).OnDelete(DeleteBehavior.Restrict);
+});
+
+modelBuilder.Entity<DraftSection>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Id).HasColumnType("uuid").HasDefaultValueSql("gen_random_uuid()");
+    entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+    entity.Property(e => e.Description).IsRequired();
+    entity.Property(e => e.OriginalSectionId).IsRequired(false);
+    entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+    entity.HasOne(e => e.Draft).WithMany(d => d.Sections).HasForeignKey(e => e.DraftId).OnDelete(DeleteBehavior.Cascade);
+});
+
+modelBuilder.Entity<DraftLesson>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Id).HasColumnType("uuid").HasDefaultValueSql("gen_random_uuid()");
+    entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+    entity.Property(e => e.Description).IsRequired();
+    entity.Property(e => e.Content).IsRequired(false);
+    entity.Property(e => e.OriginalLessonId).IsRequired(false);
+    entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+    entity.HasOne(e => e.DraftSection).WithMany(s => s.Lessons).HasForeignKey(e => e.DraftSectionId).OnDelete(DeleteBehavior.Cascade);
+});
+
+modelBuilder.Entity<DraftTask>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Id).HasColumnType("uuid").HasDefaultValueSql("gen_random_uuid()");
+    entity.Property(e => e.Type).HasConversion<string>().IsRequired();
+    entity.Property(e => e.Question).IsRequired().HasMaxLength(1000);
+    entity.Property(e => e.Options).HasColumnType("jsonb").IsRequired(false);
+    entity.Property(e => e.CorrectIndex).IsRequired(false);
+    entity.Property(e => e.CorrectIndexes).HasColumnType("jsonb").IsRequired(false);
+    entity.Property(e => e.CorrectAnswer).IsRequired(false).HasMaxLength(1000);
+    entity.Property(e => e.Explanation).IsRequired(false).HasMaxLength(2000);
+    entity.Property(e => e.Points).HasDefaultValue(1);
+    entity.Property(e => e.IsRequired).HasDefaultValue(true);
+    entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+    entity.Property(e => e.OriginalTaskId).IsRequired(false);
+    entity.HasOne(e => e.DraftLesson).WithMany(l => l.Tasks).HasForeignKey(e => e.DraftLessonId).OnDelete(DeleteBehavior.Cascade);
+});
+
+modelBuilder.Entity<DraftTag>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Id).HasColumnType("uuid").HasDefaultValueSql("gen_random_uuid()");
+    entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+    entity.HasOne(e => e.Draft).WithMany(d => d.Tags).HasForeignKey(e => e.DraftId).OnDelete(DeleteBehavior.Cascade);
+});
             base.OnModelCreating(modelBuilder);
         }
 

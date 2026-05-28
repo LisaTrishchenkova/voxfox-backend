@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VoxFox.Extensions;
+using VoxFox.Interfaces.DraftCourse;
 using VoxFox.Interfaces.Moderation;
+using VoxFox.Models.DTOs.Draft.CourseDraftDto;
 
 namespace VoxFox.Controllers;
 
@@ -11,10 +13,13 @@ namespace VoxFox.Controllers;
 public class ModerationController : ControllerBase
 {
     private readonly IModerationService _moderationService;
+    private readonly ICourseDraftService _draftService;
 
-    public ModerationController(IModerationService moderationService)
+
+    public ModerationController(IModerationService moderationService, ICourseDraftService draftService)
     {
         _moderationService = moderationService;
+        _draftService = draftService;
     }
 
     [HttpPost("courses/{courseId}/claim")]
@@ -71,4 +76,57 @@ public class ModerationController : ControllerBase
         var stats = await _moderationService.GetMyStatsAsync(userId.Value);
         return Ok(stats);
     }
+
+     [HttpGet("drafts/pending")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPendingDrafts()
+    {
+        var drafts = await _draftService.GetPendingDraftsAsync();
+        return Ok(drafts);
+    }
+
+    [HttpGet("drafts/{draftId}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CourseDraftDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDraftForReview([FromRoute] Guid draftId)
+    {
+        var result = await _draftService.GetDraftForReviewAsync(draftId);
+        if (!result.Success)
+            return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+        return Ok(result.Data);
+    }
+
+    [HttpPut("drafts/{draftId}/approve")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ApproveDraft([FromRoute] Guid draftId)
+    {
+        var result = await _draftService.ApproveDraftAsync(draftId);
+        if (!result.Success)
+            return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+        return NoContent();
+    }
+
+    [HttpPut("drafts/{draftId}/reject")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RejectDraft(
+        [FromRoute] Guid draftId,
+        [FromBody] RejectDraftRequest request)
+    {
+        var result = await _draftService.RejectDraftAsync(draftId, request.Reason);
+        if (!result.Success)
+            return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
+
+        return NoContent();
+    }
+}
+
+public class RejectDraftRequest
+{
+    public string? Reason { get; set; }
 }
