@@ -22,7 +22,12 @@ export default {
     ],
   },
   ignores: [
+    (message) => /^Merge/.test(message),
     (message) => /^Merge pull request/.test(message),
+    (message) => /^Dev \(#\d+\)/.test(message),
+    (message) => /^Test \(#\d+\)/.test(message),
+    (message) => /^Staging \(#\d+\)/.test(message),
+    (message) => /^Update \.gitignore/.test(message),
     (message) => message.includes("squash"),
   ],
 };
