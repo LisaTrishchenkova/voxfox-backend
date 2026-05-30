@@ -86,6 +86,7 @@ public class CourseRepository : ICourseRepository
 			var course = await _context.Courses
 				.Include(c => c.Tags)
 				.Include(c => c.Author)
+				.Include(c => c.Reviewer)
 				.FirstOrDefaultAsync(c => c.Id == id);
 
 			return course;
@@ -131,20 +132,45 @@ public class CourseRepository : ICourseRepository
 	}
 
 	//TODO: доделать чтобы было из Jwt
-	public async Task<IList<Course>> GetByAuthorIdAsync(Guid authorId)
+	public async Task<IList<Course>> GetByAuthorIdAsync(Guid authorId, CourseStatus? status = null)
 	{
 		try
 		{
-			var courses = await _context.Courses
+			var query = _context.Courses
 				.Include(c => c.Tags)
 				.Include(c => c.Author)
-				.Where(c => c.AuthorId == authorId)
+				.Where(c => c.AuthorId == authorId);
+
+			if (status.HasValue)
+				query = query.Where(c => c.Status == status.Value);
+
+			return await query
+				.OrderByDescending(c => c.CreatedAt)
 				.ToListAsync();
-			return courses;
 		}
 		catch (System.Exception ex)
 		{
 			_logger.LogError(ex.Message);
+			throw;
+		}
+	}
+
+	public async Task UpdateEnrollmentCountAsync(Guid courseId)
+	{
+		try
+		{
+			var totalCount = await _context.Enrollments
+				.CountAsync(e => e.CourseId == courseId);
+
+			await _context.Courses
+				.Where(c => c.Id == courseId)
+				.ExecuteUpdateAsync(setters => setters
+					.SetProperty(c => c.EnrollmentCount, totalCount)
+					.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+		}
+		catch (System.Exception ex)
+		{
+			_logger.LogError(ex, "Ошибка при обновлении EnrollmentCount для курса {CourseId}", courseId);
 			throw;
 		}
 	}
@@ -198,7 +224,11 @@ public class CourseRepository : ICourseRepository
 					Name = c.Author.Name
 				},
 				PublishedAt = c.PublishedAt,
-				CreatedAt = c.CreatedAt
+				CreatedAt = c.CreatedAt,
+				ReviewerId = c.ReviewerId,
+				ReviewerName = c.Reviewer != null ? c.Reviewer.Name : null,
+				ReviewStartedAt = c.ReviewStartedAt,
+				ReviewCount = c.ReviewCount
 			})
 			.ToListAsync();
 	}
@@ -222,5 +252,18 @@ public class CourseRepository : ICourseRepository
 			.Skip(skip)
 			.Take(take)
 			.ToListAsync(ct);
+	}
+
+	public IQueryable<Course> GetPendingCoursesQuery()
+	{
+		var courses = _context.Courses
+			.Where(c => c.Status == CourseStatus.UnderReview && !c.IsDeleted)
+			.Include(c => c.Author)
+			.Include(c => c.Tags)
+			.Include(c => c.Reviewer)
+			.OrderBy(c => c.UpdatedAt)
+			.AsQueryable();
+
+		return courses;
 	}
 }

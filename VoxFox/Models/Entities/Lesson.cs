@@ -13,7 +13,7 @@ namespace VoxFox.Models.Entities
         public string? Content { get; set; }
         public bool IsDeleted { get; set; } = false;
         public Guid SectionId { get; set; }
-
+        public int OrderIndex { get; set; } = 0;
         public Section Section { get; set; } = null!;
     }
 }

@@ -136,65 +136,65 @@ jobs:
       #     path: ./publish
       #     retention-days: 7
 
-  comment:
-    runs-on: ubuntu-24.04
-    needs: [lint, build-and-test]
-    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    steps:
-      - name: Comment PR on success
-        if: needs.build-and-test.result == 'success' && needs.lint.result == 'success'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const coverage = '${{ needs.build-and-test.outputs.coverage }}';
-            const coverageStatus = coverage ? `📊 Code coverage: ${coverage}%` : '📊 Coverage data not available';
+  # comment:
+  #   runs-on: ubuntu-24.04
+  #   needs: [lint, build-and-test]
+  #   if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+  #   steps:
+  #     - name: Comment PR on success
+  #       if: needs.build-and-test.result == 'success' && needs.lint.result == 'success'
+  #       uses: actions/github-script@v8
+  #       with:
+  #         script: |
+  #           const coverage = '${{ needs.build-and-test.outputs.coverage }}';
+  #           const coverageStatus = coverage ? `📊 Code coverage: ${coverage}%` : '📊 Coverage data not available';
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `✅ **CI passed successfully!**\n\n` +
-                    `| Check | Status |\n` +
-                    `|-------|--------|\n` +
-                    `| Linting | ✅ Passed |\n` +
-                    `| Build | ✅ Passed |\n` +
-                    `| Tests | ✅ Passed |\n` +
-                    `| ${coverageStatus} | ✅ |\n\n` +
-                    `📦 **Build artifact:** \`build-${{ github.sha }}\`\n` +
-                    `🔍 **Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n` +
-                    `✨ *Ready for review!*`
-            })
+  #           github.rest.issues.createComment({
+  #             issue_number: context.issue.number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: `✅ **CI passed successfully!**\n\n` +
+  #                   `| Check | Status |\n` +
+  #                   `|-------|--------|\n` +
+  #                   `| Linting | ✅ Passed |\n` +
+  #                   `| Build | ✅ Passed |\n` +
+  #                   `| Tests | ✅ Passed |\n` +
+  #                   `| ${coverageStatus} | ✅ |\n\n` +
+  #                   `📦 **Build artifact:** \`build-${{ github.sha }}\`\n` +
+  #                   `🔍 **Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n` +
+  #                   `✨ *Ready for review!*`
+  #           })
 
-      - name: Comment PR on failure
-        if: needs.build-and-test.result == 'failure' || needs.lint.result == 'failure'
-        uses: actions-cool/maintain-one-comment@v3
-        with:
-          body: |
-            ❌ **CI failed**
+  #     - name: Comment PR on failure
+  #       if: needs.build-and-test.result == 'failure' || needs.lint.result == 'failure'
+  #       uses: actions-cool/maintain-one-comment@v3
+  #       with:
+  #         body: |
+  #           ❌ **CI failed**
 
-            | Check | Status |
-            |-------|--------|
-            | Linting | ${{ needs.lint.result == 'success' && '✅' || '❌' }} |
-            | Build & Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} |
+  #           | Check | Status |
+  #           |-------|--------|
+  #           | Linting | ${{ needs.lint.result == 'success' && '✅' || '❌' }} |
+  #           | Build & Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} |
 
-            🔍 **Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  #           🔍 **Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            Please check the logs and fix the issues.
+  #           Please check the logs and fix the issues.
 
-  coverage-warning:
-    runs-on: ubuntu-24.04
-    needs: [build-and-test]
-    if: always() && github.event_name == 'pull_request' && needs.build-and-test.outputs.coverage_status == 'warning'
-    steps:
-      - name: Comment coverage warning
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `⚠️ **Coverage Warning**\n\n` +
-                    `Code coverage is **${{ needs.build-and-test.outputs.coverage }}%**, which is below the threshold of **${{ env.COVERAGE_THRESHOLD }}%**.\n\n` +
-                    `Please consider adding more tests to improve coverage.`
-            })
+  # coverage-warning:
+  #   runs-on: ubuntu-24.04
+  #   needs: [build-and-test]
+  #   if: always() && github.event_name == 'pull_request' && needs.build-and-test.outputs.coverage_status == 'warning'
+  #   steps:
+  #     - name: Comment coverage warning
+  #       uses: actions/github-script@v8
+  #       with:
+  #         script: |
+  #           github.rest.issues.createComment({
+  #             issue_number: context.issue.number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: `⚠️ **Coverage Warning**\n\n` +
+  #                   `Code coverage is **${{ needs.build-and-test.outputs.coverage }}%**, which is below the threshold of **${{ env.COVERAGE_THRESHOLD }}%**.\n\n` +
+  #                   `Please consider adding more tests to improve coverage.`
+  #           })

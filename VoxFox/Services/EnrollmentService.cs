@@ -10,18 +10,17 @@ public class EnrollmentService : IEnrollmentService
 {
     private readonly IEnrollmentRepository _enrollmentRepository;
     private readonly ICourseRepository _courseRepository;
+    private readonly IFavoriteRepository _favoriteRepository;
     private readonly ILogger<EnrollmentService> _logger;
 
-    public EnrollmentService(
-        IEnrollmentRepository enrollmentRepository,
-        ICourseRepository courseRepository,
-        ILogger<EnrollmentService> logger)
-    {
-        _enrollmentRepository = enrollmentRepository;
-        _courseRepository = courseRepository;
-        _logger = logger;
-    }
 
+    public EnrollmentService(IEnrollmentRepository enrollmentRepository, ICourseRepository courseRepository, IFavoriteRepository favoriteRepository, ILogger<EnrollmentService> logger)
+    {
+	    _enrollmentRepository = enrollmentRepository;
+	    _courseRepository = courseRepository;
+	    _favoriteRepository = favoriteRepository;
+	    _logger = logger;
+    }
 
     public async Task<ServiceResult<EnrollmentDto>> EnrollAsync(Guid courseId, Guid userId)
     {
@@ -52,6 +51,13 @@ public class EnrollmentService : IEnrollmentService
         };
 
         var created = await _enrollmentRepository.AddAsync(enrollment);
+
+        await _courseRepository.UpdateEnrollmentCountAsync(courseId);
+
+        var favorite = await _favoriteRepository.GetByUserAndCourseAsync(userId, courseId);
+        if (favorite != null)
+	        await _favoriteRepository.DeleteAsync(favorite);
+
         return ServiceResult<EnrollmentDto>.Ok(MapToDto(created));
     }
 
@@ -75,6 +81,10 @@ public class EnrollmentService : IEnrollmentService
                 "Нельзя отменить завершённый курс"
             );
 
+        var courseId = enrollment.CourseId;
+        await _enrollmentRepository.DeleteAsync(enrollment);
+        await _courseRepository.UpdateEnrollmentCountAsync(courseId);
+
         await _enrollmentRepository.DeleteAsync(enrollment);
         return ServiceResult<bool>.Ok(true);
     }
@@ -84,6 +94,39 @@ public class EnrollmentService : IEnrollmentService
         var enrollments = await _enrollmentRepository.GetByUserIdAsync(userId);
         var result = enrollments.Select(MapToDtoWithCourse).ToList();
         return ServiceResult<IList<EnrollmentDto>>.Ok(result);
+    }
+
+    public async Task<ServiceResult<IList<EnrollmentDto>>> GetCourseEnrollmentsAsync(Guid courseId, Guid requesterId,
+	    UserRole? requesterRole)
+    {
+	    var course = await _courseRepository.GetByIdAsync(courseId);
+	    if (course == null)
+	    {
+		    return ServiceResult<IList<EnrollmentDto>>.Fail(
+			    $"Курс с id: {courseId} не найден",
+			    StatusCodes.Status404NotFound);
+	    }
+
+	    var isAdminOrModerator = requesterRole is UserRole.Admin or UserRole.Moderator;
+	    if (!isAdminOrModerator && course.AuthorId != requesterId)
+		    return ServiceResult<IList<EnrollmentDto>>.Fail(
+			    "Нет доступа — вы не являетесь автором курса",
+			    StatusCodes.Status403Forbidden);
+
+	    var enrollments = await _enrollmentRepository.GetByCourseIdAsync(courseId);
+
+	    var resualt = enrollments.Select(e => new EnrollmentDto
+	    {
+		    Id = e.Id,
+		    UserId = e.UserId,
+		    CourseId = e.CourseId,
+		    Status = e.Status,
+		    ProgressPercent = e.ProgressPercent,
+		    EnrolledAt = e.EnrolledAt,
+		    CompletedAt = e.CompletedAt
+	    }).ToList();
+
+	    return ServiceResult<IList<EnrollmentDto>>.Ok(resualt);
     }
 
     private EnrollmentDto MapToDto(Enrollment enrollment)
@@ -128,5 +171,7 @@ public class EnrollmentService : IEnrollmentService
                 CreatedAt = enrollment.Course.CreatedAt
             }
         };
+
+
     }
 }

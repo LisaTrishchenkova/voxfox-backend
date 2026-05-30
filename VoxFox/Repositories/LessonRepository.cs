@@ -26,7 +26,7 @@ namespace VoxFox.Repositories
         {
             try
             {
- 
+
                 lesson.IsDeleted = true;
 
                 context.Lessons.Update(lesson);
@@ -47,7 +47,7 @@ namespace VoxFox.Repositories
             {
                 var lesson = await context.Lessons
                     .FirstOrDefaultAsync(l => l.Id == id);
-                
+
                 return lesson;
             }
             catch(OperationCanceledException ex)
@@ -58,6 +58,14 @@ namespace VoxFox.Repositories
         }
 
         public Task<bool> SectionExistsAsync(Guid sectionId) => context.Sections.AnyAsync(s => s.Id == sectionId);
+        public async Task<Lesson?> GetByIdWithSectionAsync(Guid id)
+        {
+	        return await context.Lessons
+		        .Include(l => l.Section)
+		        .ThenInclude(s => s.Course)
+		        .ThenInclude(c => c!.Author)
+		        .FirstOrDefaultAsync(l => l.Id == id);
+        }
 
         public async Task<Lesson> UpdateAsync(Lesson lesson)
         {
@@ -65,7 +73,7 @@ namespace VoxFox.Repositories
             {
                 context.Lessons.Update(lesson);
                 await context.SaveChangesAsync();
-                
+
                 return lesson;
             }
             catch(DbUpdateException ex)

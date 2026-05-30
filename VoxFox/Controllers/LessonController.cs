@@ -119,5 +119,50 @@ namespace VoxFox.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+        [HttpPost("{id}/complete")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LessonProgressDto))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<LessonProgressDto>> CompleteLesson([FromRoute] Guid id)
+        {
+            try
+            {
+                var userId = User.GetUserId();
+                if (userId == null)
+                    return Unauthorized();
+
+                var result = await lessonService.CompleteLessonAsync(id, userId.Value);
+                if (!result.Success)
+                    return StatusCode(result.StatusCode ?? 400, result.Message);
+
+                return Ok(result.Data);
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPut("reorder")]
+        [Authorize(Roles = "Teacher,Admin")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ReorderLessons([FromBody] ReorderLessonsDto dto)
+        {
+            try
+            {
+                var result = await lessonService.ReorderLessonsAsync(dto.SectionId, dto.LessonIds);
+                if (!result.Success)
+                    return StatusCode(result.StatusCode ?? 400, result.Message);
+
+                return NoContent();
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
     }
 }
