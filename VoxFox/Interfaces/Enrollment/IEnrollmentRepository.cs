@@ -9,4 +9,5 @@ public interface IEnrollmentRepository
 	Task<bool> ExistsAsync(Guid userId, Guid courseId);
 	Task<Models.Entities.Enrollment> UpdateAsync(Models.Entities.Enrollment enrollment);
 	Task<bool> DeleteAsync(Models.Entities.Enrollment enrollment);
+	Task<IList<Models.Entities.Enrollment>> GetByCourseIdAsync(Guid courseId);
 }

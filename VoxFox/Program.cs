@@ -59,6 +59,7 @@ public sealed class Program
 
 		app.UseCors(CorsExtensions.PolicyName);
 		app.UseRouting();
+		app.UseStaticFiles();
 
 		app.UseOpenTelemetryPrometheusScrapingEndpoint(context => context.Connection.LocalPort == metricsPort);
 
