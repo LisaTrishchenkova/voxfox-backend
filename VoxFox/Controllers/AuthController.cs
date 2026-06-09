@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
 using VoxFox.Interfaces;
 using VoxFox.Models.Entities;
@@ -22,33 +23,28 @@ namespace VoxFox.Controllers
             _applicationContext = applicationContext;
         }
 
-        /// <summary>
-        /// Ручка для входа
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns>
-        ///Ответ ручки для входа
-        /// </returns>
         [HttpPost("login")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LoginResponse))]
-        public IActionResult Login(
-            [FromBody] LoginRequest request
-            )
+        public IActionResult Login([FromBody] LoginRequest request)
         {
-            var user = _applicationContext.Users.FirstOrDefault(u => u.Email == request.Email && u.Password == request.Password);
+            // IgnoreQueryFilters — чтобы найти удалённых пользователей
+            var user = _applicationContext.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefault(u => u.Email == request.Email && u.Password == request.Password);
+
             if (user == null)
-            {
-                return NotFound("Email или пароль неверный");
-            }
+                return BadRequest(new { code = "INVALID_CREDENTIALS", message = "Неверный email или пароль" });
 
             if (user.IsDeleted)
-	            return Unauthorized("Аккаунт удалён");
+                return StatusCode(403, new { code = "ACCOUNT_DELETED", message = "Ваш аккаунт был удалён" });
 
             if (user.IsBlocked)
-	            return StatusCode(403, new {
-		            error = "Аккаунт заблокирован",
-		            reason = user.BlockReason
-	            });
+                return StatusCode(403, new
+                {
+                    code = "ACCOUNT_BLOCKED",
+                    message = "Ваш аккаунт заблокирован",
+                    reason = user.BlockReason
+                });
 
             var claims = _jwtService.CreateClaims(user.Id, request.Email, user.Role);
             var accessToken = _jwtService.GenerateAccessToken(claims);
@@ -61,20 +57,25 @@ namespace VoxFox.Controllers
             return Ok(loginResponse);
         }
 
-        // ".../api/auth/registration"
         [HttpPost("registration")]
-        public IActionResult Registration(
-            [FromBody] RegistrationRequest request
-        )
+        public IActionResult Registration([FromBody] RegistrationRequest request)
         {
-	        var existingUser = _applicationContext.Users
-		        .FirstOrDefault(u => u.Email == request.Email);
-	        if (existingUser != null)
-		        return Conflict("Потзователь с таким email уже существует");
+            var existingUser = _applicationContext.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefault(u => u.Email == request.Email);
 
-	        var allowedRoles = new[] { UserRole.Student, UserRole.Teacher };
-	        if (!allowedRoles.Contains(request.Role))
-		        return BadRequest("Недопустимая роль");
+            if (existingUser != null)
+            {
+                // удалённый пользователь пытается зарегистрироваться заново
+                if (existingUser.IsDeleted)
+                    return StatusCode(403, new { code = "ACCOUNT_DELETED", message = "Аккаунт с этим email был удалён. Обратитесь в поддержку." });
+
+                return Conflict(new { code = "EMAIL_TAKEN", message = "Пользователь с таким email уже существует" });
+            }
+
+            var allowedRoles = new[] { UserRole.Student, UserRole.Teacher };
+            if (!allowedRoles.Contains(request.Role))
+                return BadRequest(new { code = "INVALID_ROLE", message = "Недопустимая роль" });
 
             _applicationContext.Users.Add(new User
             {
@@ -90,9 +91,7 @@ namespace VoxFox.Controllers
 
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RefreshResponse))]
         [HttpPost("refresh")]
-        public IActionResult Refresh(
-           [FromBody] RefreshRequest request
-       )
+        public IActionResult Refresh([FromBody] RefreshRequest request)
         {
             return Ok();
         }
@@ -102,35 +101,31 @@ namespace VoxFox.Controllers
         [Authorize]
         public IActionResult Me()
         {
-	        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-	        if (!Guid.TryParse(userIdClaim, out var userId))
-		        return Unauthorized();
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
 
-	        var user = _applicationContext.Users.FirstOrDefault(u => u.Id == userId);
-	        if (user == null)
-		        return NotFound();
+            var user = _applicationContext.Users.FirstOrDefault(u => u.Id == userId);
+            if (user == null)
+                return NotFound();
 
-	        return Ok(new MeResponse
-	        {
-		        Id = user.Id,
-		        Name = user.Name,
-		        Bio = user.Bio,
-		        Email = user.Email,
-		        Role = user.Role.ToString(),
-		        IsEmailVerified = false,
-		        CreatedAt = DateTime.UtcNow,
-		        AvatarUrl = user.AvatarUrl
-	        });
+            return Ok(new MeResponse
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Bio = user.Bio,
+                Email = user.Email,
+                Role = user.Role.ToString(),
+                IsEmailVerified = false,
+                CreatedAt = DateTime.UtcNow,
+                AvatarUrl = user.AvatarUrl
+            });
         }
 
         [HttpPost("logout")]
-        public IActionResult Logout(
-            [FromBody] LogoutRequest request
-        )
+        public IActionResult Logout([FromBody] LogoutRequest request)
         {
             return Ok();
         }
-
     }
-
 }

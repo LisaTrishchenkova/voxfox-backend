@@ -14,4 +14,5 @@ public class CourseSearchRequest
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }
     public bool? IsFree { get; set; }
+    public CourseStatus? Status { get; set; }
 }

@@ -255,9 +255,12 @@ public class CourseService : ICourseService
     {
         try
         {
-            var query = _courseRepository.GetPublishedCoursesQuery();
+	        var query = request.Status.HasValue
+		        ? _courseRepository.GetCoursesQuery()
+			        .Where(c => c.Status == request.Status.Value)
+			        .Include(c => c.Author)
+		        : _courseRepository.GetPublishedCoursesQuery();
 
-            // ДОБАВЬ СЮДА
             var beforeFilter = await _courseRepository.GetTotalCountAsync(query);
             _logger.LogInformation("Курсов до фильтров: {Count}", beforeFilter);
 
