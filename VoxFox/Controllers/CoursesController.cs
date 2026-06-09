@@ -33,7 +33,8 @@ public class CoursesController : ControllerBase
 		[FromQuery] CourseLevel? level = null,
 		[FromQuery] decimal? minPrice = null,
 		[FromQuery] decimal? maxPrice = null,
-		[FromQuery] bool? isFree = null)
+		[FromQuery] bool? isFree = null,
+		[FromQuery] CourseStatus? status = null)
 	{
 		_logger.LogInformation(
 			"Контроллер получил: minPrice={MinPrice}, maxPrice={MaxPrice}",
@@ -65,7 +66,8 @@ public class CoursesController : ControllerBase
 				Level = level,
 				MinPrice = minPrice,
 				MaxPrice = maxPrice,
-				IsFree = isFree
+				IsFree = isFree,
+				Status = status
 			};
 
 			var result = await _courseService.SearchAsync(request);

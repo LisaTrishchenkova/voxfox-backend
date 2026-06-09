@@ -17,7 +17,6 @@ public class CourseDraftService : ICourseDraftService
     private readonly INotificationService _notificationService;
     private readonly ILogger<CourseDraftService> _logger;
 
-
     public CourseDraftService(ApplicationContext context, ICourseDraftRepository draftRepository, INotificationService notificationService, ILogger<CourseDraftService> logger)
     {
         _context = context;
@@ -229,23 +228,23 @@ public class CourseDraftService : ICourseDraftService
 
     public async Task<ServiceResult<bool>> SubmitDraftAsync(Guid draftId, Guid authorId)
     {
-        var draft = await _draftRepository.GetByIdAsync(draftId);
+	    var draft = await _draftRepository.GetByIdAsync(draftId);
 
-        if (draft == null)
-            return ServiceResult<bool>.Fail("Черновик не найден", 404);
+	    if (draft == null)
+		    return ServiceResult<bool>.Fail("Черновик не найден", 404);
 
-        if (draft.AuthorId != authorId)
-            return ServiceResult<bool>.Fail("Нет доступа", 403);
+	    if (draft.AuthorId != authorId)
+		    return ServiceResult<bool>.Fail("Нет доступа", 403);
 
-        if (draft.Status != DraftStatus.Draft && draft.Status != DraftStatus.RejectedByModerator)
-            return ServiceResult<bool>.Fail("Черновик уже отправлен на проверку");
+	    if (draft.Status != DraftStatus.Draft && draft.Status != DraftStatus.RejectedByModerator)
+		    return ServiceResult<bool>.Fail("Черновик уже отправлен на проверку");
 
-        draft.Status = DraftStatus.UnderReview;
-        draft.UpdatedAt = DateTime.UtcNow;
+	    draft.Status = DraftStatus.UnderReview;
+	    draft.UpdatedAt = DateTime.UtcNow;
 
-        await _draftRepository.UpdateAsync(draft);
+	    await _draftRepository.UpdateAsync(draft);
 
-        return ServiceResult<bool>.Ok(true);
+	    return ServiceResult<bool>.Ok(true);
     }
 
     public async Task<ServiceResult<bool>> ApproveDraftAsync(Guid draftId)
@@ -278,6 +277,8 @@ public class CourseDraftService : ICourseDraftService
         course.CertificateEnabled = draft.CertificateEnabled;
         course.CategoryId = draft.CategoryId == Guid.Empty ? null : draft.CategoryId;
         course.UpdatedAt = now;
+        // Возвращаем курс в опубликован после одобрения изменений
+        course.Status = CourseStatus.Published;
 
         if (course.Tags != null)
             foreach (var tag in course.Tags.ToList())
@@ -317,6 +318,14 @@ public class CourseDraftService : ICourseDraftService
         draft.Status = DraftStatus.RejectedByModerator;
         draft.UpdatedAt = DateTime.UtcNow;
 
+        // Возвращаем курс в опубликован — он продолжает работать для студентов
+        var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == draft.CourseId);
+        if (course != null)
+        {
+            course.Status = CourseStatus.Published;
+            course.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _draftRepository.UpdateAsync(draft);
 
         await _notificationService.SendAsync(
@@ -343,6 +352,15 @@ public class CourseDraftService : ICourseDraftService
 
         if (draft.Status == DraftStatus.UnderReview)
             return ServiceResult<bool>.Fail("Нельзя удалить черновик пока он на проверке");
+
+        // Если удаляем черновик который не на модерации — курс остаётся Published
+        var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == draft.CourseId);
+        if (course != null && course.Status == CourseStatus.UnderReview)
+        {
+            course.Status = CourseStatus.Published;
+            course.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
 
         await _draftRepository.DeleteAsync(draft);
 
@@ -416,7 +434,6 @@ public class CourseDraftService : ICourseDraftService
                     section = existingSections.FirstOrDefault(s => s.Id == draftSection.OriginalSectionId.Value);
                     if (section == null)
                     {
-                        // секция удалена или не найдена — создаём новую
                         section = new Section
                         {
                             CourseId = course.Id,
@@ -434,7 +451,6 @@ public class CourseDraftService : ICourseDraftService
                         section.OrderIndex = draftSection.OrderIndex;
                         section.IsDeleted = false;
                     }
-
                 }
                 else
                 {
@@ -555,7 +571,7 @@ public class CourseDraftService : ICourseDraftService
             _logger.LogError(ex, "DbUpdateException: {Message}", ex.InnerException?.Message ?? ex.Message);
             throw;
         }
-}
+    }
 
     // ─── Маппинг ─────────────────────────────────────────────
 
