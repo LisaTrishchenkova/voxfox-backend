@@ -27,4 +27,5 @@ public class CourseDto
     public DateTime CreatedAt { get; init; }
     public AuthorDto? Author { get; set; }
     public ICollection<TagDto>? Tags { get; set; } = new List<TagDto>();
+    public bool IsDeleted { get; set; }
 }
