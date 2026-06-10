@@ -16,7 +16,6 @@ public class CourseService : ICourseService
     private readonly ILogger<CourseService> _logger;
     private readonly ApplicationContext _context;
 
-
     public CourseService(ICourseRepository courseRepository, INotificationService notificationService, ILogger<CourseService> logger, ApplicationContext context)
     {
         _courseRepository = courseRepository;
@@ -29,16 +28,14 @@ public class CourseService : ICourseService
     {
         if (createCourseDto.CategoryId.HasValue)
         {
-            var categoryExists = await _context.Categories
-                .AnyAsync(c => c.Id == createCourseDto.CategoryId.Value);
+            var categoryExists = await _context.Categories.AnyAsync(c => c.Id == createCourseDto.CategoryId.Value);
             if (!categoryExists)
-            {
                 throw new System.Exception($"Категория с Id: {createCourseDto.CategoryId} не найдена");
-            }
         }
         var author = await _context.Users.FirstOrDefaultAsync(u => u.Id == authorId);
         if (author == null)
             throw new System.Exception("Пользователь не найден");
+
         var course = new Models.Entities.Course
         {
             Status = CourseStatus.Draft,
@@ -54,31 +51,112 @@ public class CourseService : ICourseService
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             PublishedAt = null,
-            Tags = createCourseDto.Tags.Select(tagDto => new Tag
-            {
-                Name = tagDto.Name
-            }).ToList()
+            Tags = createCourseDto.Tags.Select(tagDto => new Tag { Name = tagDto.Name }).ToList()
         };
 
         var createdCourse = await _courseRepository.AddAsync(course);
         if (createdCourse == null)
-        {
             throw new System.Exception("Не удалось добавить курс");
-        }
+
         return MapToDo(createdCourse);
     }
 
-    public async Task<bool> DeleteCourseAsync(Guid id, Guid userId, bool isAdmin = false)
+    public async Task<bool> DeleteCourseAsync(Guid id, Guid userId, bool isAdmin = false, string? reason = null)
+    {
+        _logger.LogInformation("DeleteCourse: id={Id}, userId={UserId}, isAdmin={IsAdmin}, reason={Reason}", id, userId, isAdmin, reason);
+
+        var course = await _courseRepository.GetByIdAsync(id);
+        if (course == null)
+        {
+            _logger.LogWarning("DeleteCourse: курс не найден id={Id}", id);
+            return false;
+        }
+
+        if (!isAdmin && course.AuthorId != userId)
+        {
+            _logger.LogWarning("DeleteCourse: нет доступа. AuthorId={AuthorId}, UserId={UserId}", course.AuthorId, userId);
+            return false;
+        }
+
+        var isSuccess = await _courseRepository.DeleteSoftAsync(course);
+        _logger.LogInformation("DeleteCourse: DeleteSoftAsync result={IsSuccess}", isSuccess);
+
+        _logger.LogInformation("DeleteCourse: isAdmin={IsAdmin}, AuthorId={AuthorId}, userId={UserId}, AuthorId.Value != userId: {Diff}",
+            isAdmin, course.AuthorId, userId, course.AuthorId.HasValue && course.AuthorId.Value != userId);
+
+        if (isSuccess && isAdmin && course.AuthorId.HasValue && course.AuthorId.Value != userId)
+        {
+            _logger.LogInformation("DeleteCourse: отправляем уведомление автору {AuthorId}, reason={Reason}", course.AuthorId.Value, reason);
+            await _notificationService.SendAsync(
+                course.AuthorId.Value,
+                "Курс удалён администратором",
+                $"Ваш курс «{course.Title}» был удалён администратором.{(string.IsNullOrWhiteSpace(reason) ? "" : $" Причина: {reason}")}",
+                NotificationType.CourseRejected,
+                relatedEntityId: course.Id,
+                relatedCourseId: course.Id);
+        }
+
+        return isSuccess;
+    }
+
+    public async Task<ServiceResult<bool>> RestoreCourseAsync(Guid id)
+    {
+        var course = await _context.Courses
+            .IgnoreQueryFilters()
+            .Include(c => c.Author)
+            .Include(c => c.Tags)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (course == null)
+            return ServiceResult<bool>.Fail("Курс не найден", StatusCodes.Status404NotFound);
+
+        if (!course.IsDeleted)
+            return ServiceResult<bool>.Fail("Курс не удалён", StatusCodes.Status400BadRequest);
+
+        course.IsDeleted = false;
+        course.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        if (course.AuthorId.HasValue)
+        {
+            await _notificationService.SendAsync(
+                course.AuthorId.Value,
+                "Курс восстановлен",
+                $"Ваш курс «{course.Title}» был восстановлен администратором.",
+                NotificationType.CourseApproved,
+                relatedEntityId: course.Id,
+                relatedCourseId: course.Id);
+        }
+
+        return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<bool>> UnpublishCourseAsync(Guid id, string? reason = null)
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-            return false;
+            return ServiceResult<bool>.Fail("Курс не найден", StatusCodes.Status404NotFound);
 
-        if (!isAdmin && course.AuthorId != userId)
-            return false;
+        if (course.Status != CourseStatus.Published)
+            return ServiceResult<bool>.Fail("Снять с публикации можно только опубликованный курс");
 
-        var isSuccess = await _courseRepository.DeleteSoftAsync(course);
-        return isSuccess;
+        course.Status = CourseStatus.Draft;
+        course.PublishedAt = null;
+        course.UpdatedAt = DateTime.UtcNow;
+        await _courseRepository.UpdateAsync(course);
+
+        if (course.AuthorId.HasValue)
+        {
+            await _notificationService.SendAsync(
+                course.AuthorId.Value,
+                "Курс снят с публикации",
+                $"Ваш курс «{course.Title}» был снят с публикации администратором.{(string.IsNullOrWhiteSpace(reason) ? "" : $" Причина: {reason}")}",
+                NotificationType.CourseRejected,
+                relatedEntityId: course.Id,
+                relatedCourseId: course.Id);
+        }
+
+        return ServiceResult<bool>.Ok(true);
     }
 
     public async Task<IReadOnlyCollection<CourseDto>> GetAllCoursesAsync()
@@ -86,52 +164,32 @@ public class CourseService : ICourseService
         var courses = await _courseRepository.GetAllAsync();
         if (courses == null)
             throw new System.Exception("Не удалось получить список курсов");
-
-        var coursesDto = courses
-            .Select(MapToDo)
-            .ToList();
-
-        return coursesDto;
+        return courses.Select(MapToDo).ToList();
     }
 
     public async Task<CourseDto?> GetCourseByIdAsync(Guid id)
     {
         var course = await _courseRepository.GetByIdAsync(id);
-        if (course == null)
-            return null;
-
-        var courseDto = MapToDo(course);
-
-        return courseDto;
+        if (course == null) return null;
+        return MapToDo(course);
     }
 
     public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto updateCourseDto, Guid userId)
     {
-
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-        {
-            return ServiceResult<CourseDto>.Fail(
-                $"Курс с id: {id} не найден",
-                StatusCodes.Status404NotFound
-            );
-        }
+            return ServiceResult<CourseDto>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
+
         if (course.AuthorId != userId)
             return ServiceResult<CourseDto>.Fail("Нет доступа к этому курсу", StatusCodes.Status403Forbidden);
+
         if (updateCourseDto.CategoryId.HasValue)
         {
-            var categoryExists = await _context.Categories
-                .AnyAsync(c => c.Id == updateCourseDto.CategoryId.Value);
+            var categoryExists = await _context.Categories.AnyAsync(c => c.Id == updateCourseDto.CategoryId.Value);
             if (!categoryExists)
-            {
-                return ServiceResult<CourseDto>.Fail(
-                    $"Категория с Id: {updateCourseDto.CategoryId} не найдена",
-                    StatusCodes.Status404NotFound
-                );
-            }
+                return ServiceResult<CourseDto>.Fail($"Категория с Id: {updateCourseDto.CategoryId} не найдена", StatusCodes.Status404NotFound);
         }
-        course.Title = updateCourseDto.Title ?? course.Title;
-        course.Description = updateCourseDto.Description ?? course.Description;
+
         course.Title = updateCourseDto.Title ?? course.Title;
         course.Description = updateCourseDto.Description ?? course.Description;
         course.FullDescription = updateCourseDto.FullDescription ?? course.FullDescription;
@@ -142,44 +200,25 @@ public class CourseService : ICourseService
         course.CategoryId = updateCourseDto.CategoryId ?? course.CategoryId;
         course.UpdatedAt = DateTime.UtcNow;
 
-        // Обновляем теги
         if (course.Tags != null)
         {
-            // Удаляем старые теги, которых нет в новом списке
             var existingTags = course.Tags.ToList();
             var newTagNames = updateCourseDto.Tags.Select(t => t.Name).ToList();
-
-            // Удаляем теги, которых нет в новом списке
             foreach (var existingTag in existingTags)
             {
                 if (!newTagNames.Contains(existingTag.Name))
-                {
-                    // _context.Tags.Remove(existingTag); // или course.Tags.Remove(existingTag)
                     await _courseRepository.DeleteTagAsync(existingTag);
-                }
             }
-
-            // Обновляем существующие и добавляем новые теги
             foreach (var tagDto in updateCourseDto.Tags)
             {
                 var existingTag = course.Tags.FirstOrDefault(t => t.Name == tagDto.Name);
                 if (existingTag == null)
-                {
-                    // Добавляем новый тег
-                    course.Tags.Add(new Tag
-                    {
-                        Name = tagDto.Name,
-                        CourseId = course.Id
-                    });
-                }
-                // Если тег существует, ничего не делаем (оставляем как есть)
+                    course.Tags.Add(new Tag { Name = tagDto.Name, CourseId = course.Id });
             }
         }
 
         var updateCourse = await _courseRepository.UpdateAsync(course);
-
         return ServiceResult<CourseDto>.Ok(MapToDo(updateCourse));
-
     }
 
     public async Task<ServiceResult<IList<SectionDto>>> GetSectionsByCourseIdAsync(Guid courseId)
@@ -188,30 +227,21 @@ public class CourseService : ICourseService
         {
             var course = await _courseRepository.GetByIdAsync(courseId);
             if (course == null)
-            {
-                return ServiceResult<IList<SectionDto>>.Fail(
-                    $"Курс с id: {courseId} не найден",
-                    StatusCodes.Status404NotFound
-                );
-            }
+                return ServiceResult<IList<SectionDto>>.Fail($"Курс с id: {courseId} не найден", StatusCodes.Status404NotFound);
 
             var sections = await _courseRepository.GetSectionsByCourseIdAsync(courseId);
-
             var sectionsDto = sections.Select(MapToDo).ToList();
             return ServiceResult<IList<SectionDto>>.Ok(sectionsDto);
         }
         catch (System.Exception ex)
         {
-            return ServiceResult<IList<SectionDto>>.Fail(
-                $"Ошибка при получении разделов курса: {ex.Message}",
-                StatusCodes.Status500InternalServerError
-            );
+            return ServiceResult<IList<SectionDto>>.Fail($"Ошибка при получении разделов курса: {ex.Message}", StatusCodes.Status500InternalServerError);
         }
     }
 
     private CourseDto MapToDo(Models.Entities.Course course)
     {
-        var courses = new CourseDto
+        return new CourseDto
         {
             Id = course.Id,
             Title = course.Title,
@@ -226,40 +256,45 @@ public class CourseService : ICourseService
             DurationMinutes = course.DurationMinutes,
             Status = course.Status,
             CategoryId = course.CategoryId,
-            Tags = course.Tags?.Select(t => new TagDto
-            {
-                Name = t.Name
-            }).ToList(),
-            Author = new AuthorDto
-            {
-                Id = course.Author!.Id,
-                Name = course.Author.Name
-            },
+            IsDeleted = course.IsDeleted,
+            Tags = course.Tags?.Select(t => new TagDto { Name = t.Name }).ToList(),
+            Author = new AuthorDto { Id = course.Author!.Id, Name = course.Author.Name },
             PublishedAt = course.PublishedAt,
             CreatedAt = course.CreatedAt
         };
-
-        return courses;
     }
+
     private SectionDto MapToDo(Section section)
     {
-        return new SectionDto
-        {
-            Id = section.Id,
-            Title = section.Title,
-            Description = section.Description
-        };
+        return new SectionDto { Id = section.Id, Title = section.Title, Description = section.Description };
     }
 
     public async Task<PaginatedResponse<CourseDto>> SearchAsync(CourseSearchRequest request)
     {
         try
         {
-	        var query = request.Status.HasValue
-		        ? _courseRepository.GetCoursesQuery()
-			        .Where(c => c.Status == request.Status.Value)
-			        .Include(c => c.Author)
-		        : _courseRepository.GetPublishedCoursesQuery();
+            IQueryable<Models.Entities.Course> query;
+
+            if (request.IncludeDeleted)
+            {
+                query = _context.Courses
+                    .IgnoreQueryFilters()
+                    .Include(c => c.Author)
+                    .Include(c => c.Tags)
+                    .AsQueryable();
+                if (request.Status.HasValue)
+                    query = query.Where(c => c.Status == request.Status.Value);
+            }
+            else if (request.Status.HasValue)
+            {
+                query = _courseRepository.GetCoursesQuery()
+                    .Where(c => c.Status == request.Status.Value)
+                    .Include(c => c.Author);
+            }
+            else
+            {
+                query = _courseRepository.GetPublishedCoursesQuery();
+            }
 
             var beforeFilter = await _courseRepository.GetTotalCountAsync(query);
             _logger.LogInformation("Курсов до фильтров: {Count}", beforeFilter);
@@ -275,16 +310,9 @@ public class CourseService : ICourseService
             else
             {
                 if (request.MinPrice.HasValue)
-                {
-                    var minPrice = Math.Round(request.MinPrice.Value, 2);
-                    query = query.Where(c => c.Price >= minPrice);
-                }
-
+                    query = query.Where(c => c.Price >= Math.Round(request.MinPrice.Value, 2));
                 if (request.MaxPrice.HasValue)
-                {
-                    var maxPrice = Math.Round(request.MaxPrice.Value, 2);
-                    query = query.Where(c => c.Price <= maxPrice);
-                }
+                    query = query.Where(c => c.Price <= Math.Round(request.MaxPrice.Value, 2));
             }
 
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -298,12 +326,9 @@ public class CourseService : ICourseService
             var items = await _courseRepository.GetCoursesWithProjectionAsync(
                 query,
                 (request.Page - 1) * request.PageSize,
-                request.PageSize
-            );
+                request.PageSize);
 
-            _logger.LogInformation(
-                "Поиск курсов: SearchTerm={SearchTerm}, MinPrice={MinPrice}, MaxPrice={MaxPrice}, Найдено={TotalCount}",
-                request.SearchTerm, request.MinPrice, request.MaxPrice, totalCount);
+            _logger.LogInformation("Поиск курсов: SearchTerm={SearchTerm}, Найдено={TotalCount}", request.SearchTerm, totalCount);
 
             return new PaginatedResponse<CourseDto>
             {
@@ -323,28 +348,13 @@ public class CourseService : ICourseService
 
     private IQueryable<Models.Entities.Course> ApplySearchPriority(IQueryable<Models.Entities.Course> query, string searchTerm)
     {
-        var searchTermLower = searchTerm.ToLower();
-
-        var exactMatches = query.Where(c => c.Title.ToLower() == searchTermLower);
-
-        var startsWithMatches = query.Where(c =>
-            c.Title.ToLower().StartsWith(searchTermLower) &&
-            c.Title.ToLower() != searchTermLower);
-
-        var titleContainsMatches = query.Where(c =>
-            c.Title.ToLower().Contains(searchTermLower) &&
-            !c.Title.ToLower().StartsWith(searchTermLower) &&
-            c.Title.ToLower() != searchTermLower);
-
-        var descriptionContainsMatches = query.Where(c =>
-            c.Description.ToLower().Contains(searchTermLower) &&
-            !c.Title.ToLower().Contains(searchTermLower));
-
-        return exactMatches
-            .Union(startsWithMatches)
-            .Union(titleContainsMatches)
-            .Union(descriptionContainsMatches);
+        var s = searchTerm.ToLower();
+        return query.Where(c => c.Title.ToLower() == s)
+            .Union(query.Where(c => c.Title.ToLower().StartsWith(s) && c.Title.ToLower() != s))
+            .Union(query.Where(c => c.Title.ToLower().Contains(s) && !c.Title.ToLower().StartsWith(s) && c.Title.ToLower() != s))
+            .Union(query.Where(c => c.Description.ToLower().Contains(s) && !c.Title.ToLower().Contains(s)));
     }
+
     private IQueryable<Models.Entities.Course> ApplySorting(IQueryable<Models.Entities.Course> query, CoursesSortBy sortBy, string? searchTerm)
     {
         return sortBy switch
@@ -360,89 +370,51 @@ public class CourseService : ICourseService
 
     private IQueryable<Models.Entities.Course> ApplyRelevanceSorting(IQueryable<Models.Entities.Course> query, string? searchTerm)
     {
-        if (string.IsNullOrWhiteSpace(searchTerm))
-            return query.OrderBy(c => c.Title);
-
-        var searchTermLower = searchTerm.ToLower();
-
+        if (string.IsNullOrWhiteSpace(searchTerm)) return query.OrderBy(c => c.Title);
+        var s = searchTerm.ToLower();
         return query
-            .OrderBy(c => c.Title.ToLower() != searchTermLower)          // Точные совпадения
-            .ThenBy(c => !c.Title.ToLower().StartsWith(searchTermLower)) // Начинаются с
-            .ThenBy(c => !c.Title.ToLower().Contains(searchTermLower))   // Содержат в названии
-            .ThenBy(c => !c.Description.ToLower().Contains(searchTermLower)); // Содержат в описании
+            .OrderBy(c => c.Title.ToLower() != s)
+            .ThenBy(c => !c.Title.ToLower().StartsWith(s))
+            .ThenBy(c => !c.Title.ToLower().Contains(s))
+            .ThenBy(c => !c.Description.ToLower().Contains(s));
     }
 
     public async Task<ServiceResult<bool>> PublishCourseAsync(Guid id)
     {
-
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-        {
-            return ServiceResult<bool>.Fail(
-                $"Курс с id: {id} не найден",
-                StatusCodes.Status404NotFound
-            );
-        }
-
+            return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
         if (course.Status == CourseStatus.Published)
-        {
-            return ServiceResult<bool>.Fail(
-                $"Курс с id: {id} уже опубликован"
-            );
-        }
-
-        if (string.IsNullOrWhiteSpace(course.Title) ||
-            string.IsNullOrWhiteSpace(course.Description))
-        {
-            return ServiceResult<bool>.Fail(
-                "Курс должен иметь название и описание перед публикацией"
-            );
-        }
+            return ServiceResult<bool>.Fail($"Курс с id: {id} уже опубликован");
+        if (string.IsNullOrWhiteSpace(course.Title) || string.IsNullOrWhiteSpace(course.Description))
+            return ServiceResult<bool>.Fail("Курс должен иметь название и описание перед публикацией");
 
         course.Status = CourseStatus.Published;
         course.PublishedAt = DateTime.UtcNow;
-
         await _courseRepository.UpdateAsync(course);
-
         return ServiceResult<bool>.Ok(true);
     }
 
     public async Task<ServiceResult<IList<CourseDto>>> GetMyCoursesAsync(Guid userId, CourseStatus? status = null)
     {
         var course = await _courseRepository.GetByAuthorIdAsync(userId, status);
-
-        var resualt = course.Select(MapToDo).ToList();
-        return ServiceResult<IList<CourseDto>>.Ok(resualt);
+        var result = course.Select(MapToDo).ToList();
+        return ServiceResult<IList<CourseDto>>.Ok(result);
     }
 
     public async Task<ServiceResult<bool>> ModeratorCourseAsync(Guid id)
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-        {
-            return ServiceResult<bool>.Fail(
-                $"Курс с id: {id} не найден",
-                StatusCodes.Status404NotFound);
-        }
-
+            return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
         if (course.Status != CourseStatus.Draft && course.Status != CourseStatus.RejectedByModerator)
-        {
-            return ServiceResult<bool>.Fail(
-                "На модерацию можно отправить только курс в статусе Draft или RejectedByModerator");
-        }
-
-        if (string.IsNullOrWhiteSpace(course.Title) ||
-            string.IsNullOrWhiteSpace(course.Description))
-        {
-            return ServiceResult<bool>.Fail(
-                "Курс должен иметь название и описание перед отправкой на модерацию"
-            );
-        }
+            return ServiceResult<bool>.Fail("На модерацию можно отправить только курс в статусе Draft или RejectedByModerator");
+        if (string.IsNullOrWhiteSpace(course.Title) || string.IsNullOrWhiteSpace(course.Description))
+            return ServiceResult<bool>.Fail("Курс должен иметь название и описание перед отправкой на модерацию");
 
         course.Status = CourseStatus.UnderReview;
         course.UpdatedAt = DateTime.UtcNow;
         await _courseRepository.UpdateAsync(course);
-
         return ServiceResult<bool>.Ok(true);
     }
 
@@ -450,19 +422,9 @@ public class CourseService : ICourseService
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-        {
-            return ServiceResult<bool>.Fail(
-                $"Курс с id: {id} не найден",
-                StatusCodes.Status404NotFound
-            );
-        }
-
+            return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
         if (course.Status != CourseStatus.UnderReview)
-        {
-            return ServiceResult<bool>.Fail(
-                "Одобрить можно только курс в статусе UnderReview"
-            );
-        }
+            return ServiceResult<bool>.Fail("Одобрить можно только курс в статусе UnderReview");
 
         course.Status = CourseStatus.Published;
         course.PublishedAt = DateTime.UtcNow;
@@ -480,7 +442,6 @@ public class CourseService : ICourseService
         }
         course.ReviewerId = null;
         course.ReviewStartedAt = null;
-
         await _courseRepository.UpdateAsync(course);
 
         if (course.AuthorId.HasValue)
@@ -493,7 +454,6 @@ public class CourseService : ICourseService
                 relatedEntityId: course.Id,
                 relatedCourseId: course.Id);
         }
-
         return ServiceResult<bool>.Ok(true);
     }
 
@@ -501,15 +461,9 @@ public class CourseService : ICourseService
     {
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
-            return ServiceResult<bool>.Fail(
-                $"Курс с id: {id} не найден",
-                StatusCodes.Status404NotFound
-            );
-
+            return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
         if (course.Status != CourseStatus.UnderReview)
-            return ServiceResult<bool>.Fail(
-                "Отклонить можно только курс в статусе UnderReview"
-            );
+            return ServiceResult<bool>.Fail("Отклонить можно только курс в статусе UnderReview");
 
         course.Status = CourseStatus.RejectedByModerator;
         course.UpdatedAt = DateTime.UtcNow;
@@ -527,7 +481,6 @@ public class CourseService : ICourseService
         }
         course.ReviewerId = null;
         course.ReviewStartedAt = null;
-
         await _courseRepository.UpdateAsync(course);
 
         if (course.AuthorId.HasValue)
@@ -540,23 +493,16 @@ public class CourseService : ICourseService
                 relatedEntityId: course.Id,
                 relatedCourseId: course.Id);
         }
-
         return ServiceResult<bool>.Ok(true);
     }
 
     public async Task<PaginatedResponse<CourseDto>> GetPendingCoursesAsync(int page, int pageSize)
     {
         var query = _courseRepository.GetPendingCoursesQuery();
-
         var totalCount = await _courseRepository.GetTotalCountAsync(query);
+        var items = await _courseRepository.GetCoursesWithProjectionAsync(query, (page - 1) * pageSize, pageSize);
 
-        var items = await _courseRepository.GetCoursesWithProjectionAsync(
-            query,
-            (page - 1) * pageSize,
-            pageSize
-        );
-
-        var resualt = new PaginatedResponse<CourseDto>
+        return new PaginatedResponse<CourseDto>
         {
             Items = items,
             TotalCount = totalCount,
@@ -564,7 +510,5 @@ public class CourseService : ICourseService
             TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
             PageSize = pageSize
         };
-
-        return resualt;
     }
 }
