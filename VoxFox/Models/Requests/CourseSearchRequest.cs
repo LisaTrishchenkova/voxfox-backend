@@ -16,4 +16,5 @@ public class CourseSearchRequest
     public bool? IsFree { get; set; }
     public CourseStatus? Status { get; set; }
     public bool IncludeDeleted { get; set; }
+    public bool OnlyDeleted { get; set; }
 }

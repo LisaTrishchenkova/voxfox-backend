@@ -27,6 +27,7 @@ namespace VoxFox.Models.Entities
         public DbSet<DraftLesson> DraftLessons { get; set; }
         public DbSet<DraftTask> DraftTasks { get; set; }
         public DbSet<DraftTag> DraftTags { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -92,6 +93,9 @@ namespace VoxFox.Models.Entities
                 entity.Property(e => e.IsDeleted)
                     .HasDefaultValue(false);
                 entity.HasQueryFilter(e => !e.IsDeleted);
+                entity.Property(e => e.Balance)
+                    .HasColumnType("numeric(10,2)")
+                    .HasDefaultValue(0);
             });
             modelBuilder.Entity<Course>(entity =>
             {
@@ -657,6 +661,53 @@ modelBuilder.Entity<DraftTag>(entity =>
     entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
     entity.HasOne(e => e.Draft).WithMany(d => d.Tags).HasForeignKey(e => e.DraftId).OnDelete(DeleteBehavior.Cascade);
 });
+modelBuilder.Entity<Transaction>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Id)
+        .HasColumnType("uuid")
+        .HasDefaultValueSql("gen_random_uuid()");
+    entity.Property(e => e.Amount)
+        .HasColumnType("numeric(10,2)")
+        .IsRequired();
+    entity.Property(e => e.TotalAmount)
+        .HasColumnType("numeric(10,2)")
+        .IsRequired(false);
+    entity.Property(e => e.TeacherAmount)
+        .HasColumnType("numeric(10,2)")
+        .IsRequired(false);
+    entity.Property(e => e.PlatformAmount)
+        .HasColumnType("numeric(10,2)")
+        .IsRequired(false);
+    entity.Property(e => e.Type)
+        .HasConversion<string>();
+    entity.Property(e => e.IsRefunded)
+        .HasDefaultValue(false);
+    entity.Property(e => e.OriginalTransactionId)
+        .IsRequired(false);
+    entity.Property(e => e.CreatedAt)
+        .IsRequired()
+        .HasColumnType("timestamp with time zone")
+        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+    entity.HasOne(e => e.User)
+        .WithMany()
+        .HasForeignKey(e => e.UserId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    entity.HasOne(e => e.Course)
+        .WithMany()
+        .HasForeignKey(e => e.CourseId)
+        .IsRequired(false)
+        .OnDelete(DeleteBehavior.SetNull);
+
+    entity.HasOne(e => e.OriginalTransaction)
+        .WithMany()
+        .HasForeignKey(e => e.OriginalTransactionId)
+        .IsRequired(false)
+        .OnDelete(DeleteBehavior.Restrict);
+});
+
             base.OnModelCreating(modelBuilder);
         }
 

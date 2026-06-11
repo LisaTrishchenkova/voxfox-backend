@@ -16,6 +16,7 @@ namespace VoxFox.Models.Entities
         public bool IsBlocked { get; set; } = false;
         public DateTime? BlockedAt { get; set; }
         public string? BlockReason { get; set; }
+        public decimal Balance { get; set; } = 0;
 
         public ICollection<Course> Courses { get; set; } = [];
     }

@@ -275,7 +275,17 @@ public class CourseService : ICourseService
         {
             IQueryable<Models.Entities.Course> query;
 
-            if (request.IncludeDeleted)
+            if (request.OnlyDeleted)
+            {
+                // Только удалённые курсы
+                query = _context.Courses
+                    .IgnoreQueryFilters()
+                    .Where(c => c.IsDeleted)
+                    .Include(c => c.Author)
+                    .Include(c => c.Tags)
+                    .AsQueryable();
+            }
+            else if (request.IncludeDeleted)
             {
                 query = _context.Courses
                     .IgnoreQueryFilters()
