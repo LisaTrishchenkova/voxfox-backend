@@ -39,7 +39,8 @@ public class CoursesController : ControllerBase
         [FromQuery] decimal? maxPrice = null,
         [FromQuery] bool? isFree = null,
         [FromQuery] CourseStatus? status = null,
-        [FromQuery] bool includeDeleted = false)
+        [FromQuery] bool includeDeleted = false,
+        [FromQuery] bool onlyDeleted = false)
     {
         _logger.LogInformation("Контроллер получил: minPrice={MinPrice}, maxPrice={MaxPrice}", minPrice, maxPrice);
         try
@@ -66,7 +67,8 @@ public class CoursesController : ControllerBase
                 MaxPrice = maxPrice,
                 IsFree = isFree,
                 Status = status,
-                IncludeDeleted = includeDeleted
+                IncludeDeleted = includeDeleted,
+                OnlyDeleted = onlyDeleted
             };
 
             var result = await _courseService.SearchAsync(request);

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using VoxFox.Features;
 using VoxFox.Interfaces;
 using VoxFox.Interfaces.Admin;
+using VoxFox.Interfaces.Balance;
 using VoxFox.Interfaces.Certificate;
 using VoxFox.Interfaces.DraftCourse;
 using VoxFox.Interfaces.Enrollment;
@@ -56,6 +57,8 @@ public static class ServiceCollectionExtensions
 		services.AddHostedService<ModerationCleanupJob>();
 		services.AddScoped<ICourseDraftRepository, CourseDraftRepository>();
 		services.AddScoped<ICourseDraftService, CourseDraftService>();
+		services.AddScoped<IBalanceRepository, BalanceRepository>();
+		services.AddScoped<IBalanceService, BalanceService>();
 		return services;
 	}
 
