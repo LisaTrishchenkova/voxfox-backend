@@ -2,6 +2,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using VoxFox.Enums;
+using VoxFox.Interfaces.Achievement;
 using VoxFox.Interfaces.Certificate;
 using VoxFox.Interfaces.Notification;
 using VoxFox.Models.DTOs;
@@ -14,13 +15,16 @@ public class CertificateService : ICertificateService
 {
     private readonly ICertificateRepository _certificateRepository;
     private readonly INotificationService _notificationService;
+    private readonly IAchievementService _achievementService;
 
     public CertificateService(
         ICertificateRepository certificateRepository,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IAchievementService achievementService)
     {
         _certificateRepository = certificateRepository;
         _notificationService = notificationService;
+        _achievementService = achievementService;
     }
 
     public async Task<Certificate?> IssueCertificateAsync(
@@ -29,7 +33,6 @@ public class CertificateService : ICertificateService
         if (!certificateEnabled)
             return null;
 
-        // не выдаём дважды
         var existing = await _certificateRepository.GetByEnrollmentIdAsync(enrollmentId);
         if (existing != null)
             return existing;
@@ -46,12 +49,15 @@ public class CertificateService : ICertificateService
         var created = await _certificateRepository.AddAsync(certificate);
 
         await _notificationService.SendAsync(
-	        userId,
-	        "Сертификат получен",
-	        "Поздравляем! Вы успешно завершили курс и получили сертификат.",
-	        NotificationType.CertificateIssued,
-	        relatedEntityId: created.Id,
-	        relatedCourseId: courseId);
+            userId,
+            "Сертификат получен",
+            "Поздравляем! Вы успешно завершили курс и получили сертификат.",
+            NotificationType.CertificateIssued,
+            relatedEntityId: created.Id,
+            relatedCourseId: courseId);
+
+        // ─── Ачивки за сертификат ─────────────────────────────────
+        await _achievementService.CheckAndAwardAsync(userId, AchievementTrigger.CertificateIssued);
 
         return created;
     }

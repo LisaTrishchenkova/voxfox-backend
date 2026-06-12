@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Enums;
+using VoxFox.Interfaces.Achievement;
 using VoxFox.Interfaces.Certificate;
 using VoxFox.Interfaces.Lesson;
 using VoxFox.Models;
@@ -15,14 +16,22 @@ public class LessonService : ILessonService
     private readonly ILessonProgressRepository _progressRepository;
     private readonly ApplicationContext _context;
     private readonly ICertificateService _certificateService;
+    private readonly IAchievementService _achievementService;
 
-    public LessonService(ILessonRepository lessonRepository, ILogger<LessonService> logger, ILessonProgressRepository progressRepository, ApplicationContext context, ICertificateService certificateService)
+    public LessonService(
+        ILessonRepository lessonRepository,
+        ILogger<LessonService> logger,
+        ILessonProgressRepository progressRepository,
+        ApplicationContext context,
+        ICertificateService certificateService,
+        IAchievementService achievementService)
     {
         _lessonRepository = lessonRepository;
         _logger = logger;
         _progressRepository = progressRepository;
         _context = context;
         _certificateService = certificateService;
+        _achievementService = achievementService;
     }
 
     public async Task<ServiceResult<LessonDto>> CreateLessonAsync(Guid sectionId, CreateLessonDto createLessonDto)
@@ -79,7 +88,6 @@ public class LessonService : ILessonService
         if (enrollment == null)
             return ServiceResult<LessonProgressDto>.Fail("Вы не записаны на этот курс", 403);
 
-        // Проверяем что курс опубликован и не удалён
         if (enrollment.Course == null ||
             enrollment.Course.Status != CourseStatus.Published ||
             enrollment.Course.IsDeleted)
@@ -113,6 +121,7 @@ public class LessonService : ILessonService
 
         await _context.SaveChangesAsync();
 
+        // ─── Сертификат ───────────────────────────────────────────
         if (enrollment.ProgressPercent >= 100)
         {
             var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == enrollment.CourseId);
@@ -120,12 +129,23 @@ public class LessonService : ILessonService
                 await _certificateService.IssueCertificateAsync(userId, enrollment.CourseId, enrollment.Id, course.CertificateEnabled);
         }
 
+        // ─── Ачивки за уроки ──────────────────────────────────────
+        var newAchievements = await _achievementService.CheckAndAwardAsync(userId, AchievementTrigger.LessonCompleted);
+
+        // ─── Ачивки за завершение курса ───────────────────────────
+        if (enrollment.ProgressPercent >= 100)
+        {
+            var courseAchievements = await _achievementService.CheckAndAwardAsync(userId, AchievementTrigger.CourseCompleted);
+            newAchievements.AddRange(courseAchievements);
+        }
+
         return ServiceResult<LessonProgressDto>.Ok(new LessonProgressDto
         {
             LessonId = lessonId,
             EnrollmentId = enrollment.Id,
             CompletedAt = progress.CompletedAt,
-            ProgressPercent = enrollment.ProgressPercent
+            ProgressPercent = enrollment.ProgressPercent,
+            NewAchievements = newAchievements
         });
     }
 
