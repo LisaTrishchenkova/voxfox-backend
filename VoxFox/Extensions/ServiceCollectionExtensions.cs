@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using VoxFox.Features;
 using VoxFox.Interfaces;
+using VoxFox.Interfaces.Achievement;
 using VoxFox.Interfaces.Admin;
 using VoxFox.Interfaces.Balance;
 using VoxFox.Interfaces.Certificate;
@@ -15,6 +16,7 @@ using VoxFox.Interfaces.Question;
 using VoxFox.Interfaces.Review;
 using VoxFox.Interfaces.Section;
 using VoxFox.Interfaces.Task;
+using VoxFox.Interfaces.Teacher;
 using VoxFox.Interfaces.User;
 using VoxFox.Models.Entities;
 using VoxFox.Repositories;
@@ -59,6 +61,10 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<ICourseDraftService, CourseDraftService>();
 		services.AddScoped<IBalanceRepository, BalanceRepository>();
 		services.AddScoped<IBalanceService, BalanceService>();
+		services.AddScoped<ITeacherRepository, TeacherRepository>();
+		services.AddScoped<ITeacherService, TeacherService>();
+		services.AddScoped<IAchievementRepository, AchievementRepository>();
+		services.AddScoped<IAchievementService, AchievementService>();
 		return services;
 	}
 

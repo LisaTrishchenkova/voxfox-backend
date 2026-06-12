@@ -6,4 +6,5 @@ public class LessonProgressDto
     public Guid EnrollmentId { get; set; }
     public DateTime CompletedAt { get; set; }
     public int ProgressPercent { get; set; }
+    public List<NewAchievementDto> NewAchievements { get; set; } = new();
 }

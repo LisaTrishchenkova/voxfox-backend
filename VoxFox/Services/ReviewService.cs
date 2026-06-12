@@ -1,4 +1,5 @@
 using VoxFox.Interfaces;
+using VoxFox.Interfaces.Achievement;
 using VoxFox.Interfaces.Review;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
@@ -10,15 +11,18 @@ public class ReviewService : IReviewService
     private readonly IReviewRepository _reviewRepository;
     private readonly ICourseRepository _courseRepository;
     private readonly ILogger<ReviewService> _logger;
+    private readonly IAchievementService _achievementService;
 
     public ReviewService(
         IReviewRepository reviewRepository,
         ICourseRepository courseRepository,
-        ILogger<ReviewService> logger)
+        ILogger<ReviewService> logger,
+        IAchievementService achievementService)
     {
         _reviewRepository = reviewRepository;
         _courseRepository = courseRepository;
         _logger = logger;
+        _achievementService = achievementService;
     }
 
     public async Task<ServiceResult<ReviewDto>> CreateReviewAsync(
@@ -52,8 +56,10 @@ public class ReviewService : IReviewService
 
         var created = await _reviewRepository.AddAsync(review);
 
-        // пересчитываем рейтинг курса
         await RecalculateCourseRatingAsync(courseId);
+
+        // ─── Ачивки за отзыв ──────────────────────────────────────
+        await _achievementService.CheckAndAwardAsync(userId, AchievementTrigger.ReviewCreated);
 
         return ServiceResult<ReviewDto>.Ok(MapToDto(created));
     }
@@ -67,8 +73,7 @@ public class ReviewService : IReviewService
                 StatusCodes.Status404NotFound);
 
         var reviews = await _reviewRepository.GetByCourseIdAsync(courseId);
-        var result = reviews.Select(MapToDto).ToList();
-        return ServiceResult<IList<ReviewDto>>.Ok(result);
+        return ServiceResult<IList<ReviewDto>>.Ok(reviews.Select(MapToDto).ToList());
     }
 
     public async Task<ServiceResult<ReviewDto>> UpdateReviewAsync(
@@ -100,7 +105,6 @@ public class ReviewService : IReviewService
         review.UpdatedAt = DateTime.UtcNow;
 
         var updated = await _reviewRepository.UpdateAsync(review);
-
         await RecalculateCourseRatingAsync(review.CourseId);
 
         return ServiceResult<ReviewDto>.Ok(MapToDto(updated));

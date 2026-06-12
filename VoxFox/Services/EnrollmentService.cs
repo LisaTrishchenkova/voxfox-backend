@@ -1,5 +1,6 @@
 using VoxFox.Enums;
 using VoxFox.Interfaces;
+using VoxFox.Interfaces.Achievement;
 using VoxFox.Interfaces.Enrollment;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Entities;
@@ -12,14 +13,20 @@ public class EnrollmentService : IEnrollmentService
     private readonly ICourseRepository _courseRepository;
     private readonly IFavoriteRepository _favoriteRepository;
     private readonly ILogger<EnrollmentService> _logger;
+    private readonly IAchievementService _achievementService;
 
-
-    public EnrollmentService(IEnrollmentRepository enrollmentRepository, ICourseRepository courseRepository, IFavoriteRepository favoriteRepository, ILogger<EnrollmentService> logger)
+    public EnrollmentService(
+        IEnrollmentRepository enrollmentRepository,
+        ICourseRepository courseRepository,
+        IFavoriteRepository favoriteRepository,
+        ILogger<EnrollmentService> logger,
+        IAchievementService achievementService)
     {
-	    _enrollmentRepository = enrollmentRepository;
-	    _courseRepository = courseRepository;
-	    _favoriteRepository = favoriteRepository;
-	    _logger = logger;
+        _enrollmentRepository = enrollmentRepository;
+        _courseRepository = courseRepository;
+        _favoriteRepository = favoriteRepository;
+        _logger = logger;
+        _achievementService = achievementService;
     }
 
     public async Task<ServiceResult<EnrollmentDto>> EnrollAsync(Guid courseId, Guid userId)
@@ -28,19 +35,15 @@ public class EnrollmentService : IEnrollmentService
         if (course == null)
             return ServiceResult<EnrollmentDto>.Fail(
                 $"Курс с id: {courseId} не найден",
-                StatusCodes.Status404NotFound
-            );
+                StatusCodes.Status404NotFound);
 
         if (course.Status != CourseStatus.Published)
             return ServiceResult<EnrollmentDto>.Fail(
-                "Записаться можно только на опубликованный курс"
-            );
+                "Записаться можно только на опубликованный курс");
 
         var alreadyEnrolled = await _enrollmentRepository.ExistsAsync(userId, courseId);
         if (alreadyEnrolled)
-            return ServiceResult<EnrollmentDto>.Fail(
-                "Вы уже записаны на этот курс"
-            );
+            return ServiceResult<EnrollmentDto>.Fail("Вы уже записаны на этот курс");
 
         var enrollment = new Enrollment
         {
@@ -56,7 +59,10 @@ public class EnrollmentService : IEnrollmentService
 
         var favorite = await _favoriteRepository.GetByUserAndCourseAsync(userId, courseId);
         if (favorite != null)
-	        await _favoriteRepository.DeleteAsync(favorite);
+            await _favoriteRepository.DeleteAsync(favorite);
+
+        // ─── Ачивки за запись на курс ─────────────────────────────
+        await _achievementService.CheckAndAwardAsync(userId, AchievementTrigger.CourseEnrolled);
 
         return ServiceResult<EnrollmentDto>.Ok(MapToDto(created));
     }
@@ -67,25 +73,20 @@ public class EnrollmentService : IEnrollmentService
         if (enrollment == null)
             return ServiceResult<bool>.Fail(
                 $"Запись с id: {enrollmentId} не найдена",
-                StatusCodes.Status404NotFound
-            );
+                StatusCodes.Status404NotFound);
 
         if (enrollment.UserId != userId)
             return ServiceResult<bool>.Fail(
                 "Нет доступа к этой записи",
-                StatusCodes.Status403Forbidden
-            );
+                StatusCodes.Status403Forbidden);
 
         if (enrollment.Status == EnrollmentStatus.Completed)
-            return ServiceResult<bool>.Fail(
-                "Нельзя отменить завершённый курс"
-            );
+            return ServiceResult<bool>.Fail("Нельзя отменить завершённый курс");
 
         var courseId = enrollment.CourseId;
         await _enrollmentRepository.DeleteAsync(enrollment);
         await _courseRepository.UpdateEnrollmentCountAsync(courseId);
 
-        await _enrollmentRepository.DeleteAsync(enrollment);
         return ServiceResult<bool>.Ok(true);
     }
 
@@ -96,82 +97,72 @@ public class EnrollmentService : IEnrollmentService
         return ServiceResult<IList<EnrollmentDto>>.Ok(result);
     }
 
-    public async Task<ServiceResult<IList<EnrollmentDto>>> GetCourseEnrollmentsAsync(Guid courseId, Guid requesterId,
-	    UserRole? requesterRole)
+    public async Task<ServiceResult<IList<EnrollmentDto>>> GetCourseEnrollmentsAsync(
+        Guid courseId, Guid requesterId, UserRole? requesterRole)
     {
-	    var course = await _courseRepository.GetByIdAsync(courseId);
-	    if (course == null)
-	    {
-		    return ServiceResult<IList<EnrollmentDto>>.Fail(
-			    $"Курс с id: {courseId} не найден",
-			    StatusCodes.Status404NotFound);
-	    }
+        var course = await _courseRepository.GetByIdAsync(courseId);
+        if (course == null)
+            return ServiceResult<IList<EnrollmentDto>>.Fail(
+                $"Курс с id: {courseId} не найден",
+                StatusCodes.Status404NotFound);
 
-	    var isAdminOrModerator = requesterRole is UserRole.Admin or UserRole.Moderator;
-	    if (!isAdminOrModerator && course.AuthorId != requesterId)
-		    return ServiceResult<IList<EnrollmentDto>>.Fail(
-			    "Нет доступа — вы не являетесь автором курса",
-			    StatusCodes.Status403Forbidden);
+        var isAdminOrModerator = requesterRole is UserRole.Admin or UserRole.Moderator;
+        if (!isAdminOrModerator && course.AuthorId != requesterId)
+            return ServiceResult<IList<EnrollmentDto>>.Fail(
+                "Нет доступа — вы не являетесь автором курса",
+                StatusCodes.Status403Forbidden);
 
-	    var enrollments = await _enrollmentRepository.GetByCourseIdAsync(courseId);
+        var enrollments = await _enrollmentRepository.GetByCourseIdAsync(courseId);
 
-	    var resualt = enrollments.Select(e => new EnrollmentDto
-	    {
-		    Id = e.Id,
-		    UserId = e.UserId,
-		    CourseId = e.CourseId,
-		    Status = e.Status,
-		    ProgressPercent = e.ProgressPercent,
-		    EnrolledAt = e.EnrolledAt,
-		    CompletedAt = e.CompletedAt
-	    }).ToList();
-
-	    return ServiceResult<IList<EnrollmentDto>>.Ok(resualt);
-    }
-
-    private EnrollmentDto MapToDto(Enrollment enrollment)
-    {
-        return new EnrollmentDto
+        var result = enrollments.Select(e => new EnrollmentDto
         {
-            Id = enrollment.Id,
-            UserId = enrollment.UserId,
-            CourseId = enrollment.CourseId,
-            Status = enrollment.Status,
-            ProgressPercent = enrollment.ProgressPercent,
-            EnrolledAt = enrollment.EnrolledAt,
-            CompletedAt = enrollment.CompletedAt
-        };
+            Id = e.Id,
+            UserId = e.UserId,
+            CourseId = e.CourseId,
+            Status = e.Status,
+            ProgressPercent = e.ProgressPercent,
+            EnrolledAt = e.EnrolledAt,
+            CompletedAt = e.CompletedAt
+        }).ToList();
+
+        return ServiceResult<IList<EnrollmentDto>>.Ok(result);
     }
 
-    private EnrollmentDto MapToDtoWithCourse(Enrollment enrollment)
+    private EnrollmentDto MapToDto(Enrollment enrollment) => new()
     {
-        return new EnrollmentDto
+        Id = enrollment.Id,
+        UserId = enrollment.UserId,
+        CourseId = enrollment.CourseId,
+        Status = enrollment.Status,
+        ProgressPercent = enrollment.ProgressPercent,
+        EnrolledAt = enrollment.EnrolledAt,
+        CompletedAt = enrollment.CompletedAt
+    };
+
+    private EnrollmentDto MapToDtoWithCourse(Enrollment enrollment) => new()
+    {
+        Id = enrollment.Id,
+        UserId = enrollment.UserId,
+        CourseId = enrollment.CourseId,
+        Status = enrollment.Status,
+        ProgressPercent = enrollment.ProgressPercent,
+        EnrolledAt = enrollment.EnrolledAt,
+        CompletedAt = enrollment.CompletedAt,
+        Course = enrollment.Course == null ? null : new CourseDto
         {
-            Id = enrollment.Id,
-            UserId = enrollment.UserId,
-            CourseId = enrollment.CourseId,
-            Status = enrollment.Status,
-            ProgressPercent = enrollment.ProgressPercent,
-            EnrolledAt = enrollment.EnrolledAt,
-            CompletedAt = enrollment.CompletedAt,
-            Course = enrollment.Course == null ? null : new CourseDto
-            {
-                Id = enrollment.Course.Id,
-                Title = enrollment.Course.Title,
-                Description = enrollment.Course.Description,
-                Status = enrollment.Course.Status,
-                Level = enrollment.Course.Level,
-                CoverImageUrl = enrollment.Course.CoverImageUrl,
-                Price = enrollment.Course.Price,
-                CertificateEnabled = enrollment.Course.CertificateEnabled,
-                EnrollmentCount = enrollment.Course.EnrollmentCount,
-                Rating = enrollment.Course.Rating,
-                DurationMinutes = enrollment.Course.DurationMinutes,
-                PublishedAt = enrollment.Course.PublishedAt,
-                CreatedAt = enrollment.Course.CreatedAt
-            }
-        };
-
-
-    }
+            Id = enrollment.Course.Id,
+            Title = enrollment.Course.Title,
+            Description = enrollment.Course.Description,
+            Status = enrollment.Course.Status,
+            Level = enrollment.Course.Level,
+            CoverImageUrl = enrollment.Course.CoverImageUrl,
+            Price = enrollment.Course.Price,
+            CertificateEnabled = enrollment.Course.CertificateEnabled,
+            EnrollmentCount = enrollment.Course.EnrollmentCount,
+            Rating = enrollment.Course.Rating,
+            DurationMinutes = enrollment.Course.DurationMinutes,
+            PublishedAt = enrollment.Course.PublishedAt,
+            CreatedAt = enrollment.Course.CreatedAt
+        }
+    };
 }
