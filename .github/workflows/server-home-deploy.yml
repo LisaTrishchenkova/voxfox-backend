@@ -37,12 +37,5 @@ jobs:
           script: |
             cd /opt/voxfox
             docker load < image.tar.gz
-            docker stop voxfox-api || true
-            docker rm voxfox-api || true
-            docker run -d \
-              --name voxfox-api \
-              --restart unless-stopped \
-              -p 127.0.0.1:8000:8000 \
-              --env-file .env \
-              voxfox-api:latest
+            docker compose up -d --no-build
             rm image.tar.gz
