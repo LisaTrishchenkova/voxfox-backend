@@ -17,4 +17,7 @@ public class CourseDraftDto
     public DateTime UpdatedAt { get; set; }
     public List<DraftSectionDto> Sections { get; set; } = [];
     public List<string> Tags { get; set; } = [];
+    public string? ReviewerId { get; set; }
+    public string? ReviewerName { get; set; }
+    public DateTime? ReviewStartedAt { get; set; }
 }

@@ -164,8 +164,9 @@ public class CourseRepository : ICourseRepository
 
     public IQueryable<Course> GetPublishedCoursesQuery()
     {
+        // PublishedUnderReview тоже показываем в каталоге — курс опубликован и виден студентам
         return _context.Courses
-            .Where(c => c.Status == CourseStatus.Published)
+            .Where(c => c.Status == CourseStatus.Published || c.Status == CourseStatus.PublishedUnderReview)
             .AsNoTracking()
             .Include(c => c.Author)
             .AsQueryable();
@@ -229,8 +230,10 @@ public class CourseRepository : ICourseRepository
 
     public IQueryable<Course> GetPendingCoursesQuery()
     {
+        // Показываем оба статуса модерации в очереди
         return _context.Courses
-            .Where(c => c.Status == CourseStatus.UnderReview && !c.IsDeleted)
+            .Where(c => (c.Status == CourseStatus.UnderReview || c.Status == CourseStatus.PublishedUnderReview)
+                        && !c.IsDeleted)
             .Include(c => c.Author)
             .Include(c => c.Tags)
             .Include(c => c.Reviewer)

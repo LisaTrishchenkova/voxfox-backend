@@ -6,6 +6,7 @@ namespace VoxFox.Enums
         Title,
         Date,
         Price,
-        DateDesc
+        DateDesc,
+        Popular
     }
 }
