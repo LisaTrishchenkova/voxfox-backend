@@ -23,6 +23,10 @@ public class CourseDraft
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    public Guid? ReviewerId { get; set; }
+    public User? Reviewer { get; set; }
+    public DateTime? ReviewStartedAt { get; set; }
+
     public ICollection<DraftSection> Sections { get; set; } = [];
     public ICollection<DraftTag> Tags { get; set; } = [];
 }

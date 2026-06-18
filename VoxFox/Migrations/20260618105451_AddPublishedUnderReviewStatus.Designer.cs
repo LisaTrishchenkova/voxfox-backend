@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VoxFox.Models.Entities;
@@ -11,9 +12,11 @@ using VoxFox.Models.Entities;
 namespace VoxFox.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20260618105451_AddPublishedUnderReviewStatus")]
+    partial class AddPublishedUnderReviewStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -471,12 +474,6 @@ namespace VoxFox.Migrations
                         .HasColumnType("numeric(10,2)")
                         .HasDefaultValue(0m);
 
-                    b.Property<DateTime?>("ReviewStartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ReviewerId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -496,8 +493,6 @@ namespace VoxFox.Migrations
                     b.HasIndex("AuthorId");
 
                     b.HasIndex("CourseId");
-
-                    b.HasIndex("ReviewerId");
 
                     b.ToTable("CourseDrafts");
                 });
@@ -1258,15 +1253,9 @@ namespace VoxFox.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("VoxFox.Models.Entities.User", "Reviewer")
-                        .WithMany()
-                        .HasForeignKey("ReviewerId");
-
                     b.Navigation("Author");
 
                     b.Navigation("Course");
-
-                    b.Navigation("Reviewer");
                 });
 
             modelBuilder.Entity("VoxFox.Models.Entities.CourseReviewHistory", b =>

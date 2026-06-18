@@ -81,12 +81,8 @@ public class CourseService : ICourseService
         var isSuccess = await _courseRepository.DeleteSoftAsync(course);
         _logger.LogInformation("DeleteCourse: DeleteSoftAsync result={IsSuccess}", isSuccess);
 
-        _logger.LogInformation("DeleteCourse: isAdmin={IsAdmin}, AuthorId={AuthorId}, userId={UserId}, AuthorId.Value != userId: {Diff}",
-            isAdmin, course.AuthorId, userId, course.AuthorId.HasValue && course.AuthorId.Value != userId);
-
         if (isSuccess && isAdmin && course.AuthorId.HasValue && course.AuthorId.Value != userId)
         {
-            _logger.LogInformation("DeleteCourse: отправляем уведомление автору {AuthorId}, reason={Reason}", course.AuthorId.Value, reason);
             await _notificationService.SendAsync(
                 course.AuthorId.Value,
                 "Курс удалён администратором",
@@ -137,7 +133,8 @@ public class CourseService : ICourseService
         if (course == null)
             return ServiceResult<bool>.Fail("Курс не найден", StatusCodes.Status404NotFound);
 
-        if (course.Status != CourseStatus.Published)
+        // Снять с публикации можно и обычный Published и PublishedUnderReview
+        if (course.Status != CourseStatus.Published && course.Status != CourseStatus.PublishedUnderReview)
             return ServiceResult<bool>.Fail("Снять с публикации можно только опубликованный курс");
 
         course.Status = CourseStatus.Draft;
@@ -277,7 +274,6 @@ public class CourseService : ICourseService
 
             if (request.OnlyDeleted)
             {
-                // Только удалённые курсы
                 query = _context.Courses
                     .IgnoreQueryFilters()
                     .Where(c => c.IsDeleted)
@@ -303,11 +299,9 @@ public class CourseService : ICourseService
             }
             else
             {
+                // Показываем Published и PublishedUnderReview в каталоге
                 query = _courseRepository.GetPublishedCoursesQuery();
             }
-
-            var beforeFilter = await _courseRepository.GetTotalCountAsync(query);
-            _logger.LogInformation("Курсов до фильтров: {Count}", beforeFilter);
 
             if (request.CategoryId.HasValue)
                 query = query.Where(c => c.CategoryId == request.CategoryId.Value);
@@ -338,8 +332,6 @@ public class CourseService : ICourseService
                 (request.Page - 1) * request.PageSize,
                 request.PageSize);
 
-            _logger.LogInformation("Поиск курсов: SearchTerm={SearchTerm}, Найдено={TotalCount}", request.SearchTerm, totalCount);
-
             return new PaginatedResponse<CourseDto>
             {
                 Items = items,
@@ -369,24 +361,30 @@ public class CourseService : ICourseService
     {
         return sortBy switch
         {
-            CoursesSortBy.Price => query.OrderBy(c => c.Price),
-            CoursesSortBy.Title => query.OrderBy(c => c.Title),
-            CoursesSortBy.Date => query.OrderBy(c => c.PublishedAt),
+            CoursesSortBy.Price    => query.OrderBy(c => c.Price),
+            CoursesSortBy.Title    => query.OrderBy(c => c.Title),
+            CoursesSortBy.Date     => query.OrderBy(c => c.PublishedAt),
             CoursesSortBy.DateDesc => query.OrderByDescending(c => c.PublishedAt),
+            CoursesSortBy.Popular  => query.OrderByDescending(c => c.EnrollmentCount)
+                                          .ThenByDescending(c => c.Rating)
+                                          .ThenByDescending(c => c.PublishedAt),
             CoursesSortBy.Relevance => ApplyRelevanceSorting(query, searchTerm),
-            _ => query.OrderBy(c => c.Title)
+            _ => query.OrderByDescending(c => c.EnrollmentCount)
         };
     }
 
     private IQueryable<Models.Entities.Course> ApplyRelevanceSorting(IQueryable<Models.Entities.Course> query, string? searchTerm)
     {
-        if (string.IsNullOrWhiteSpace(searchTerm)) return query.OrderBy(c => c.Title);
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return query.OrderByDescending(c => c.EnrollmentCount);
+
         var s = searchTerm.ToLower();
         return query
             .OrderBy(c => c.Title.ToLower() != s)
             .ThenBy(c => !c.Title.ToLower().StartsWith(s))
             .ThenBy(c => !c.Title.ToLower().Contains(s))
-            .ThenBy(c => !c.Description.ToLower().Contains(s));
+            .ThenBy(c => !c.Description.ToLower().Contains(s))
+            .ThenByDescending(c => c.EnrollmentCount);
     }
 
     public async Task<ServiceResult<bool>> PublishCourseAsync(Guid id)
@@ -417,12 +415,20 @@ public class CourseService : ICourseService
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
             return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
-        if (course.Status != CourseStatus.Draft && course.Status != CourseStatus.RejectedByModerator)
-            return ServiceResult<bool>.Fail("На модерацию можно отправить только курс в статусе Draft или RejectedByModerator");
+
+        if (course.Status != CourseStatus.Draft
+            && course.Status != CourseStatus.RejectedByModerator
+            && course.Status != CourseStatus.Published)
+            return ServiceResult<bool>.Fail("На модерацию можно отправить только курс в статусе Draft, RejectedByModerator или Published");
+
         if (string.IsNullOrWhiteSpace(course.Title) || string.IsNullOrWhiteSpace(course.Description))
             return ServiceResult<bool>.Fail("Курс должен иметь название и описание перед отправкой на модерацию");
 
-        course.Status = CourseStatus.UnderReview;
+        // Опубликованный курс переходит в PublishedUnderReview — остаётся видимым в каталоге
+        course.Status = course.Status == CourseStatus.Published
+            ? CourseStatus.PublishedUnderReview
+            : CourseStatus.UnderReview;
+
         course.UpdatedAt = DateTime.UtcNow;
         await _courseRepository.UpdateAsync(course);
         return ServiceResult<bool>.Ok(true);
@@ -430,41 +436,47 @@ public class CourseService : ICourseService
 
     public async Task<ServiceResult<bool>> ApproveCourseAsync(Guid id)
     {
-        var course = await _courseRepository.GetByIdAsync(id);
-        if (course == null)
-            return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
-        if (course.Status != CourseStatus.UnderReview)
-            return ServiceResult<bool>.Fail("Одобрить можно только курс в статусе UnderReview");
+	    var course = await _courseRepository.GetByIdAsync(id);
+	    if (course == null)
+		    return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
 
-        course.Status = CourseStatus.Published;
-        course.PublishedAt = DateTime.UtcNow;
-        course.UpdatedAt = DateTime.UtcNow;
+	    if (course.Status != CourseStatus.UnderReview && course.Status != CourseStatus.PublishedUnderReview)
+		    return ServiceResult<bool>.Fail("Одобрить можно только курс на модерации");
 
-        if (course.ReviewerId.HasValue)
-        {
-            _context.CourseReviewHistories.Add(new CourseReviewHistory
-            {
-                CourseId = course.Id,
-                ModeratorId = course.ReviewerId.Value,
-                Decision = ReviewDecision.Approved,
-                ReviewedAt = DateTime.UtcNow,
-            });
-        }
-        course.ReviewerId = null;
-        course.ReviewStartedAt = null;
-        await _courseRepository.UpdateAsync(course);
+	    // Запоминаем статус ДО изменения
+	    var wasPublishedUnderReview = course.Status == CourseStatus.PublishedUnderReview;
 
-        if (course.AuthorId.HasValue)
-        {
-            await _notificationService.SendAsync(
-                course.AuthorId.Value,
-                "Курс одобрен",
-                $"Ваш курс «{course.Title}» прошёл модерацию и опубликован",
-                NotificationType.CourseApproved,
-                relatedEntityId: course.Id,
-                relatedCourseId: course.Id);
-        }
-        return ServiceResult<bool>.Ok(true);
+	    course.Status = CourseStatus.Published;
+	    // PublishedUnderReview сохраняет старую дату публикации, UnderReview — ставит новую
+	    if (!wasPublishedUnderReview)
+		    course.PublishedAt = DateTime.UtcNow;
+	    course.UpdatedAt = DateTime.UtcNow;
+
+	    if (course.ReviewerId.HasValue)
+	    {
+		    _context.CourseReviewHistories.Add(new CourseReviewHistory
+		    {
+			    CourseId = course.Id,
+			    ModeratorId = course.ReviewerId.Value,
+			    Decision = ReviewDecision.Approved,
+			    ReviewedAt = DateTime.UtcNow,
+		    });
+	    }
+	    course.ReviewerId = null;
+	    course.ReviewStartedAt = null;
+	    await _courseRepository.UpdateAsync(course);
+
+	    if (course.AuthorId.HasValue)
+	    {
+		    await _notificationService.SendAsync(
+			    course.AuthorId.Value,
+			    "Курс одобрен",
+			    $"Ваш курс «{course.Title}» прошёл модерацию и опубликован",
+			    NotificationType.CourseApproved,
+			    relatedEntityId: course.Id,
+			    relatedCourseId: course.Id);
+	    }
+	    return ServiceResult<bool>.Ok(true);
     }
 
     public async Task<ServiceResult<bool>> RejectCourseAsync(Guid id, string? reason)
@@ -472,8 +484,9 @@ public class CourseService : ICourseService
         var course = await _courseRepository.GetByIdAsync(id);
         if (course == null)
             return ServiceResult<bool>.Fail($"Курс с id: {id} не найден", StatusCodes.Status404NotFound);
-        if (course.Status != CourseStatus.UnderReview)
-            return ServiceResult<bool>.Fail("Отклонить можно только курс в статусе UnderReview");
+
+        if (course.Status != CourseStatus.UnderReview && course.Status != CourseStatus.PublishedUnderReview)
+            return ServiceResult<bool>.Fail("Отклонить можно только курс на модерации");
 
         course.Status = CourseStatus.RejectedByModerator;
         course.UpdatedAt = DateTime.UtcNow;

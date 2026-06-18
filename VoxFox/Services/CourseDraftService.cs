@@ -16,6 +16,7 @@ public class CourseDraftService : ICourseDraftService
     private readonly ICourseDraftRepository _draftRepository;
     private readonly INotificationService _notificationService;
     private readonly ILogger<CourseDraftService> _logger;
+    private static readonly TimeSpan ClaimTimeout = TimeSpan.FromMinutes(30);
 
     public CourseDraftService(ApplicationContext context, ICourseDraftRepository draftRepository, INotificationService notificationService, ILogger<CourseDraftService> logger)
     {
@@ -40,13 +41,11 @@ public class CourseDraftService : ICourseDraftService
             return ServiceResult<CourseDraftDto>.Fail("Нет доступа к этому курсу", 403);
 
         if (course.Status != CourseStatus.Published)
-            return ServiceResult<CourseDraftDto>.Fail(
-                "Черновик можно создать только для опубликованного курса");
+            return ServiceResult<CourseDraftDto>.Fail("Черновик можно создать только для опубликованного курса");
 
         var existing = await _draftRepository.GetByCourseIdAsync(courseId);
         if (existing != null)
-            return ServiceResult<CourseDraftDto>.Fail(
-                "У этого курса уже есть активный черновик", 409);
+            return ServiceResult<CourseDraftDto>.Fail("У этого курса уже есть активный черновик", 409);
 
         var now = DateTime.UtcNow;
 
@@ -120,37 +119,24 @@ public class CourseDraftService : ICourseDraftService
         }
 
         await _draftRepository.AddAsync(draft);
-
         return ServiceResult<CourseDraftDto>.Ok(MapToDto(draft));
     }
 
     public async Task<ServiceResult<CourseDraftDto>> GetDraftAsync(Guid courseId, Guid authorId)
     {
         var draft = await _draftRepository.GetByCourseIdAsync(courseId);
-
-        if (draft == null)
-            return ServiceResult<CourseDraftDto>.Fail("Черновик не найден", 404);
-
-        if (draft.AuthorId != authorId)
-            return ServiceResult<CourseDraftDto>.Fail("Нет доступа", 403);
-
+        if (draft == null) return ServiceResult<CourseDraftDto>.Fail("Черновик не найден", 404);
+        if (draft.AuthorId != authorId) return ServiceResult<CourseDraftDto>.Fail("Нет доступа", 403);
         return ServiceResult<CourseDraftDto>.Ok(MapToDto(draft));
     }
 
-    public async Task<ServiceResult<CourseDraftDto>> UpdateDraftAsync(
-        Guid draftId, CreateCourseDraftDto dto, Guid authorId)
+    public async Task<ServiceResult<CourseDraftDto>> UpdateDraftAsync(Guid draftId, CreateCourseDraftDto dto, Guid authorId)
     {
         var draft = await _draftRepository.GetByIdAsync(draftId);
-
-        if (draft == null)
-            return ServiceResult<CourseDraftDto>.Fail("Черновик не найден", 404);
-
-        if (draft.AuthorId != authorId)
-            return ServiceResult<CourseDraftDto>.Fail("Нет доступа", 403);
-
+        if (draft == null) return ServiceResult<CourseDraftDto>.Fail("Черновик не найден", 404);
+        if (draft.AuthorId != authorId) return ServiceResult<CourseDraftDto>.Fail("Нет доступа", 403);
         if (draft.Status == DraftStatus.UnderReview)
-            return ServiceResult<CourseDraftDto>.Fail(
-                "Нельзя редактировать черновик пока он на проверке");
+            return ServiceResult<CourseDraftDto>.Fail("Нельзя редактировать черновик пока он на проверке");
 
         draft.Title = dto.Title;
         draft.Description = dto.Description;
@@ -164,12 +150,7 @@ public class CourseDraftService : ICourseDraftService
         draft.UpdatedAt = DateTime.UtcNow;
 
         _context.DraftTags.RemoveRange(draft.Tags);
-        draft.Tags = dto.Tags.Select(t => new DraftTag
-        {
-            DraftId = draft.Id,
-            Name = t
-        }).ToList();
-
+        draft.Tags = dto.Tags.Select(t => new DraftTag { DraftId = draft.Id, Name = t }).ToList();
         _context.DraftSections.RemoveRange(draft.Sections);
 
         foreach (var sDto in dto.Sections.OrderBy(s => s.OrderIndex))
@@ -196,9 +177,7 @@ public class CourseDraftService : ICourseDraftService
 
                 foreach (var tDto in lDto.Tasks.OrderBy(t => t.OrderIndex))
                 {
-                    if (!Enum.TryParse<TaskType>(tDto.Type, out var taskType))
-                        continue;
-
+                    if (!Enum.TryParse<TaskType>(tDto.Type, out var taskType)) continue;
                     lesson.Tasks.Add(new DraftTask
                     {
                         OriginalTaskId = tDto.OriginalTaskId,
@@ -222,38 +201,64 @@ public class CourseDraftService : ICourseDraftService
         }
 
         await _draftRepository.UpdateAsync(draft);
-
         return ServiceResult<CourseDraftDto>.Ok(MapToDto(draft));
     }
 
     public async Task<ServiceResult<bool>> SubmitDraftAsync(Guid draftId, Guid authorId)
     {
-	    var draft = await _draftRepository.GetByIdAsync(draftId);
+        var draft = await _draftRepository.GetByIdAsync(draftId);
+        if (draft == null) return ServiceResult<bool>.Fail("Черновик не найден", 404);
+        if (draft.AuthorId != authorId) return ServiceResult<bool>.Fail("Нет доступа", 403);
+        if (draft.Status != DraftStatus.Draft && draft.Status != DraftStatus.RejectedByModerator)
+            return ServiceResult<bool>.Fail("Черновик уже отправлен на проверку");
 
-	    if (draft == null)
-		    return ServiceResult<bool>.Fail("Черновик не найден", 404);
-
-	    if (draft.AuthorId != authorId)
-		    return ServiceResult<bool>.Fail("Нет доступа", 403);
-
-	    if (draft.Status != DraftStatus.Draft && draft.Status != DraftStatus.RejectedByModerator)
-		    return ServiceResult<bool>.Fail("Черновик уже отправлен на проверку");
-
-	    draft.Status = DraftStatus.UnderReview;
-	    draft.UpdatedAt = DateTime.UtcNow;
-
-	    await _draftRepository.UpdateAsync(draft);
-
-	    return ServiceResult<bool>.Ok(true);
+        draft.Status = DraftStatus.UnderReview;
+        draft.UpdatedAt = DateTime.UtcNow;
+        await _draftRepository.UpdateAsync(draft);
+        return ServiceResult<bool>.Ok(true);
     }
 
-    public async Task<ServiceResult<bool>> ApproveDraftAsync(Guid draftId)
+    public async Task<ServiceResult<bool>> ClaimDraftAsync(Guid draftId, Guid moderatorId)
     {
         var draft = await _draftRepository.GetByIdAsync(draftId);
+        if (draft == null) return ServiceResult<bool>.Fail("Черновик не найден", 404);
+        if (draft.Status != DraftStatus.UnderReview)
+            return ServiceResult<bool>.Fail("Черновик не на модерации");
 
-        if (draft == null)
-            return ServiceResult<bool>.Fail("Черновик не найден", 404);
+        // Уже захвачен этим же модератором — ок
+        if (draft.ReviewerId == moderatorId) return ServiceResult<bool>.Ok(true);
 
+        // Захвачен другим и таймаут не истёк
+        if (draft.ReviewerId.HasValue && draft.ReviewStartedAt.HasValue)
+        {
+            var elapsed = DateTime.UtcNow - draft.ReviewStartedAt.Value;
+            if (elapsed < ClaimTimeout)
+                return ServiceResult<bool>.Fail("Черновик уже проверяется другим модератором", 409);
+        }
+
+        draft.ReviewerId = moderatorId;
+        draft.ReviewStartedAt = DateTime.UtcNow;
+        await _draftRepository.UpdateAsync(draft);
+        return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<bool>> ReleaseDraftAsync(Guid draftId, Guid moderatorId)
+    {
+        var draft = await _draftRepository.GetByIdAsync(draftId);
+        if (draft == null) return ServiceResult<bool>.Fail("Черновик не найден", 404);
+        if (draft.ReviewerId != moderatorId)
+            return ServiceResult<bool>.Fail("Вы не захватывали этот черновик", 403);
+
+        draft.ReviewerId = null;
+        draft.ReviewStartedAt = null;
+        await _draftRepository.UpdateAsync(draft);
+        return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<bool>> ApproveDraftAsync(Guid draftId, Guid moderatorId)
+    {
+        var draft = await _draftRepository.GetByIdAsync(draftId);
+        if (draft == null) return ServiceResult<bool>.Fail("Черновик не найден", 404);
         if (draft.Status != DraftStatus.UnderReview)
             return ServiceResult<bool>.Fail("Черновик не находится на проверке");
 
@@ -263,8 +268,7 @@ public class CourseDraftService : ICourseDraftService
                 .ThenInclude(s => s.Lessons.Where(l => !l.IsDeleted))
             .FirstOrDefaultAsync(c => c.Id == draft.CourseId);
 
-        if (course == null)
-            return ServiceResult<bool>.Fail("Курс не найден", 404);
+        if (course == null) return ServiceResult<bool>.Fail("Курс не найден", 404);
 
         var now = DateTime.UtcNow;
 
@@ -277,20 +281,23 @@ public class CourseDraftService : ICourseDraftService
         course.CertificateEnabled = draft.CertificateEnabled;
         course.CategoryId = draft.CategoryId == Guid.Empty ? null : draft.CategoryId;
         course.UpdatedAt = now;
-        // Возвращаем курс в опубликован после одобрения изменений
         course.Status = CourseStatus.Published;
 
         if (course.Tags != null)
             foreach (var tag in course.Tags.ToList())
                 _context.Tags.Remove(tag);
 
-        course.Tags = draft.Tags.Select(t => new Tag
-        {
-            CourseId = course.Id,
-            Name = t.Name
-        }).ToList();
+        course.Tags = draft.Tags.Select(t => new Tag { CourseId = course.Id, Name = t.Name }).ToList();
 
         await ApplyDraftStructureAsync(course, draft, now);
+
+        _context.CourseReviewHistories.Add(new CourseReviewHistory
+        {
+            CourseId = draft.CourseId,
+            ModeratorId = moderatorId,
+            Decision = ReviewDecision.Approved,
+            ReviewedAt = now,
+        });
 
         await _draftRepository.DeleteAsync(draft);
 
@@ -305,26 +312,33 @@ public class CourseDraftService : ICourseDraftService
         return ServiceResult<bool>.Ok(true);
     }
 
-    public async Task<ServiceResult<bool>> RejectDraftAsync(Guid draftId, string? reason)
+    public async Task<ServiceResult<bool>> RejectDraftAsync(Guid draftId, string? reason, Guid moderatorId)
     {
         var draft = await _draftRepository.GetByIdAsync(draftId);
-
-        if (draft == null)
-            return ServiceResult<bool>.Fail("Черновик не найден", 404);
-
+        if (draft == null) return ServiceResult<bool>.Fail("Черновик не найден", 404);
         if (draft.Status != DraftStatus.UnderReview)
             return ServiceResult<bool>.Fail("Черновик не находится на проверке");
 
         draft.Status = DraftStatus.RejectedByModerator;
+        draft.ReviewerId = null;
+        draft.ReviewStartedAt = null;
         draft.UpdatedAt = DateTime.UtcNow;
 
-        // Возвращаем курс в опубликован — он продолжает работать для студентов
         var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == draft.CourseId);
         if (course != null)
         {
             course.Status = CourseStatus.Published;
             course.UpdatedAt = DateTime.UtcNow;
         }
+
+        _context.CourseReviewHistories.Add(new CourseReviewHistory
+        {
+            CourseId = draft.CourseId,
+            ModeratorId = moderatorId,
+            Decision = ReviewDecision.Rejected,
+            Reason = reason,
+            ReviewedAt = DateTime.UtcNow,
+        });
 
         await _draftRepository.UpdateAsync(draft);
 
@@ -343,17 +357,11 @@ public class CourseDraftService : ICourseDraftService
     public async Task<ServiceResult<bool>> DeleteDraftAsync(Guid draftId, Guid authorId)
     {
         var draft = await _draftRepository.GetByIdAsync(draftId);
-
-        if (draft == null)
-            return ServiceResult<bool>.Fail("Черновик не найден", 404);
-
-        if (draft.AuthorId != authorId)
-            return ServiceResult<bool>.Fail("Нет доступа", 403);
-
+        if (draft == null) return ServiceResult<bool>.Fail("Черновик не найден", 404);
+        if (draft.AuthorId != authorId) return ServiceResult<bool>.Fail("Нет доступа", 403);
         if (draft.Status == DraftStatus.UnderReview)
             return ServiceResult<bool>.Fail("Нельзя удалить черновик пока он на проверке");
 
-        // Если удаляем черновик который не на модерации — курс остаётся Published
         var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == draft.CourseId);
         if (course != null && course.Status == CourseStatus.UnderReview)
         {
@@ -363,17 +371,13 @@ public class CourseDraftService : ICourseDraftService
         }
 
         await _draftRepository.DeleteAsync(draft);
-
         return ServiceResult<bool>.Ok(true);
     }
 
     public async Task<ServiceResult<CourseDraftDto>> GetDraftForReviewAsync(Guid draftId)
     {
         var draft = await _draftRepository.GetByIdAsync(draftId);
-
-        if (draft == null)
-            return ServiceResult<CourseDraftDto>.Fail("Черновик не найден", 404);
-
+        if (draft == null) return ServiceResult<CourseDraftDto>.Fail("Черновик не найден", 404);
         return ServiceResult<CourseDraftDto>.Ok(MapToDto(draft));
     }
 
@@ -382,8 +386,6 @@ public class CourseDraftService : ICourseDraftService
         var drafts = await _draftRepository.GetPendingAsync();
         return drafts.Select(MapToDto).ToList();
     }
-
-    // ─── Применение структуры черновика к курсу ─────────────
 
     private async Task ApplyDraftStructureAsync(Models.Entities.Course course, CourseDraft draft, DateTime now)
     {
@@ -400,47 +402,34 @@ public class CourseDraftService : ICourseDraftService
 
             var draftOriginalSectionIds = draft.Sections
                 .Where(s => s.OriginalSectionId.HasValue)
-                .Select(s => s.OriginalSectionId!.Value)
-                .ToHashSet();
+                .Select(s => s.OriginalSectionId!.Value).ToHashSet();
 
             var draftOriginalLessonIds = draft.Sections
                 .SelectMany(s => s.Lessons)
                 .Where(l => l.OriginalLessonId.HasValue)
-                .Select(l => l.OriginalLessonId!.Value)
-                .ToHashSet();
+                .Select(l => l.OriginalLessonId!.Value).ToHashSet();
 
             var draftOriginalTaskIds = draft.Sections
-                .SelectMany(s => s.Lessons)
-                .SelectMany(l => l.Tasks)
+                .SelectMany(s => s.Lessons).SelectMany(l => l.Tasks)
                 .Where(t => t.OriginalTaskId.HasValue)
-                .Select(t => t.OriginalTaskId!.Value)
-                .ToHashSet();
+                .Select(t => t.OriginalTaskId!.Value).ToHashSet();
 
             foreach (var section in existingSections.Where(s => !draftOriginalSectionIds.Contains(s.Id)))
                 section.IsDeleted = true;
-
             foreach (var lesson in existingLessons.Where(l => !draftOriginalLessonIds.Contains(l.Id)))
                 lesson.IsDeleted = true;
-
             foreach (var task in existingTasks.Where(t => !draftOriginalTaskIds.Contains(t.Id)))
                 task.IsDeleted = true;
 
             foreach (var draftSection in draft.Sections)
             {
                 Section section;
-
                 if (draftSection.OriginalSectionId.HasValue)
                 {
                     section = existingSections.FirstOrDefault(s => s.Id == draftSection.OriginalSectionId.Value);
                     if (section == null)
                     {
-                        section = new Section
-                        {
-                            CourseId = course.Id,
-                            Title = draftSection.Title,
-                            Description = draftSection.Description,
-                            OrderIndex = draftSection.OrderIndex,
-                        };
+                        section = new Section { CourseId = course.Id, Title = draftSection.Title, Description = draftSection.Description, OrderIndex = draftSection.OrderIndex };
                         _context.Sections.Add(section);
                         await _context.SaveChangesAsync();
                     }
@@ -454,13 +443,7 @@ public class CourseDraftService : ICourseDraftService
                 }
                 else
                 {
-                    section = new Section
-                    {
-                        CourseId = course.Id,
-                        Title = draftSection.Title,
-                        Description = draftSection.Description,
-                        OrderIndex = draftSection.OrderIndex,
-                    };
+                    section = new Section { CourseId = course.Id, Title = draftSection.Title, Description = draftSection.Description, OrderIndex = draftSection.OrderIndex };
                     _context.Sections.Add(section);
                     await _context.SaveChangesAsync();
                 }
@@ -468,20 +451,12 @@ public class CourseDraftService : ICourseDraftService
                 foreach (var draftLesson in draftSection.Lessons)
                 {
                     Lesson lesson;
-
                     if (draftLesson.OriginalLessonId.HasValue)
                     {
                         lesson = existingLessons.FirstOrDefault(l => l.Id == draftLesson.OriginalLessonId.Value);
                         if (lesson == null)
                         {
-                            lesson = new Lesson
-                            {
-                                SectionId = section.Id,
-                                Title = draftLesson.Title,
-                                Description = draftLesson.Description,
-                                Content = draftLesson.Content ?? string.Empty,
-                                OrderIndex = draftLesson.OrderIndex,
-                            };
+                            lesson = new Lesson { SectionId = section.Id, Title = draftLesson.Title, Description = draftLesson.Description, Content = draftLesson.Content ?? string.Empty, OrderIndex = draftLesson.OrderIndex };
                             _context.Lessons.Add(lesson);
                             await _context.SaveChangesAsync();
                         }
@@ -496,14 +471,7 @@ public class CourseDraftService : ICourseDraftService
                     }
                     else
                     {
-                        lesson = new Lesson
-                        {
-                            SectionId = section.Id,
-                            Title = draftLesson.Title,
-                            Description = draftLesson.Description,
-                            Content = draftLesson.Content ?? string.Empty,
-                            OrderIndex = draftLesson.OrderIndex,
-                        };
+                        lesson = new Lesson { SectionId = section.Id, Title = draftLesson.Title, Description = draftLesson.Description, Content = draftLesson.Content ?? string.Empty, OrderIndex = draftLesson.OrderIndex };
                         _context.Lessons.Add(lesson);
                         await _context.SaveChangesAsync();
                     }
@@ -512,53 +480,26 @@ public class CourseDraftService : ICourseDraftService
                     {
                         if (draftTask.OriginalTaskId.HasValue)
                         {
-                            var task = existingTasks
-                                .FirstOrDefault(t => t.Id == draftTask.OriginalTaskId.Value);
-
+                            var task = existingTasks.FirstOrDefault(t => t.Id == draftTask.OriginalTaskId.Value);
                             if (task == null) continue;
 
-                            bool changed = task.Question != draftTask.Question ||
-                                           task.CorrectAnswer != draftTask.CorrectAnswer ||
-                                           task.CorrectIndex != draftTask.CorrectIndex;
+                            bool changed = task.Question != draftTask.Question || task.CorrectAnswer != draftTask.CorrectAnswer || task.CorrectIndex != draftTask.CorrectIndex;
 
-                            task.Type = draftTask.Type;
-                            task.Question = draftTask.Question;
-                            task.Options = draftTask.Options;
-                            task.CorrectIndex = draftTask.CorrectIndex;
-                            task.CorrectIndexes = draftTask.CorrectIndexes;
-                            task.CorrectAnswer = draftTask.CorrectAnswer;
-                            task.Explanation = draftTask.Explanation;
-                            task.Points = draftTask.Points;
-                            task.IsRequired = draftTask.IsRequired;
-                            task.OrderIndex = draftTask.OrderIndex;
-                            task.IsDeleted = false;
+                            task.Type = draftTask.Type; task.Question = draftTask.Question; task.Options = draftTask.Options;
+                            task.CorrectIndex = draftTask.CorrectIndex; task.CorrectIndexes = draftTask.CorrectIndexes;
+                            task.CorrectAnswer = draftTask.CorrectAnswer; task.Explanation = draftTask.Explanation;
+                            task.Points = draftTask.Points; task.IsRequired = draftTask.IsRequired;
+                            task.OrderIndex = draftTask.OrderIndex; task.IsDeleted = false;
 
                             if (changed)
                             {
-                                var submissions = await _context.TaskSubmissions
-                                    .AsQueryable()
-                                    .Where(s => s.TaskId == task.Id)
-                                    .ToListAsync();
+                                var submissions = await _context.TaskSubmissions.AsQueryable().Where(s => s.TaskId == task.Id).ToListAsync();
                                 _context.TaskSubmissions.RemoveRange(submissions);
                             }
                         }
                         else
                         {
-                            _context.Tasks.Add(new TaskEntity
-                            {
-                                LessonId = lesson.Id,
-                                Type = draftTask.Type,
-                                Question = draftTask.Question,
-                                Options = draftTask.Options,
-                                CorrectIndex = draftTask.CorrectIndex,
-                                CorrectIndexes = draftTask.CorrectIndexes,
-                                CorrectAnswer = draftTask.CorrectAnswer,
-                                Explanation = draftTask.Explanation,
-                                Points = draftTask.Points,
-                                IsRequired = draftTask.IsRequired,
-                                OrderIndex = draftTask.OrderIndex,
-                                CreatedAt = now,
-                            });
+                            _context.Tasks.Add(new TaskEntity { LessonId = lesson.Id, Type = draftTask.Type, Question = draftTask.Question, Options = draftTask.Options, CorrectIndex = draftTask.CorrectIndex, CorrectIndexes = draftTask.CorrectIndexes, CorrectAnswer = draftTask.CorrectAnswer, Explanation = draftTask.Explanation, Points = draftTask.Points, IsRequired = draftTask.IsRequired, OrderIndex = draftTask.OrderIndex, CreatedAt = now });
                         }
                     }
                 }
@@ -572,8 +513,6 @@ public class CourseDraftService : ICourseDraftService
             throw;
         }
     }
-
-    // ─── Маппинг ─────────────────────────────────────────────
 
     private static CourseDraftDto MapToDto(CourseDraft draft) => new()
     {
@@ -590,6 +529,9 @@ public class CourseDraftService : ICourseDraftService
         Status = draft.Status.ToString(),
         CreatedAt = draft.CreatedAt,
         UpdatedAt = draft.UpdatedAt,
+        ReviewerId = draft.ReviewerId?.ToString(),
+        ReviewerName = draft.Reviewer?.Name,
+        ReviewStartedAt = draft.ReviewStartedAt,
         Tags = draft.Tags.Select(t => t.Name).ToList(),
         Sections = draft.Sections.OrderBy(s => s.OrderIndex).Select(s => new DraftSectionDto
         {

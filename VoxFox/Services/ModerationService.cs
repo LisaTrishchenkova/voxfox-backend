@@ -9,7 +9,7 @@ namespace VoxFox.Services;
 
 public class ModerationService : IModerationService
 {
-	 private readonly ApplicationContext _context;
+    private readonly ApplicationContext _context;
     private static readonly TimeSpan ClaimTimeout = TimeSpan.FromMinutes(30);
 
     public ModerationService(ApplicationContext context)
@@ -25,7 +25,8 @@ public class ModerationService : IModerationService
         if (course == null)
             return ServiceResult<bool>.Fail("Курс не найден", 404);
 
-        if (course.Status != CourseStatus.UnderReview)
+        // Принимаем оба статуса модерации
+        if (course.Status != CourseStatus.UnderReview && course.Status != CourseStatus.PublishedUnderReview)
             return ServiceResult<bool>.Fail("Курс не находится на модерации");
 
         // Если уже захвачен этим же модератором — ок
@@ -103,38 +104,41 @@ public class ModerationService : IModerationService
 
     public async Task<ModeratorStatsDto> GetMyStatsAsync(Guid moderatorId)
     {
-	    var moderator = await _context.Users.IgnoreQueryFilters()
-		    .FirstOrDefaultAsync(u => u.Id == moderatorId);
+        var moderator = await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == moderatorId);
 
-	    var currentlyReviewing = await _context.Courses.IgnoreQueryFilters()
-		    .CountAsync(c => c.ReviewerId == moderatorId && c.Status == CourseStatus.UnderReview);
+        // Считаем оба статуса модерации
+        var currentlyReviewing = await _context.Courses.IgnoreQueryFilters()
+            .CountAsync(c => c.ReviewerId == moderatorId
+                && (c.Status == CourseStatus.UnderReview || c.Status == CourseStatus.PublishedUnderReview));
 
-	    var totalApproved = await _context.CourseReviewHistories
-		    .CountAsync(h => h.ModeratorId == moderatorId && h.Decision == ReviewDecision.Approved);
+        var totalApproved = await _context.CourseReviewHistories
+            .CountAsync(h => h.ModeratorId == moderatorId && h.Decision == ReviewDecision.Approved);
 
-	    var totalRejected = await _context.CourseReviewHistories
-		    .CountAsync(h => h.ModeratorId == moderatorId && h.Decision == ReviewDecision.Rejected);
+        var totalRejected = await _context.CourseReviewHistories
+            .CountAsync(h => h.ModeratorId == moderatorId && h.Decision == ReviewDecision.Rejected);
 
-	    return new ModeratorStatsDto
-	    {
-		    ModeratorId = moderatorId,
-		    ModeratorName = moderator?.Name ?? "—",
-		    CurrentlyReviewing = currentlyReviewing,
-		    TotalReviewed = totalApproved + totalRejected,
-		    TotalApproved = totalApproved,
-		    TotalRejected = totalRejected,
-	    };
+        return new ModeratorStatsDto
+        {
+            ModeratorId = moderatorId,
+            ModeratorName = moderator?.Name ?? "—",
+            CurrentlyReviewing = currentlyReviewing,
+            TotalReviewed = totalApproved + totalRejected,
+            TotalApproved = totalApproved,
+            TotalRejected = totalRejected,
+        };
     }
 
     public async Task ReleaseStaleClaimsAsync(TimeSpan timeout)
     {
         var cutoff = DateTime.UtcNow - timeout;
 
+        // Освобождаем зависшие claim для обоих статусов
         var staleCourses = await _context.Courses.IgnoreQueryFilters()
             .Where(c => c.ReviewerId.HasValue
                         && c.ReviewStartedAt.HasValue
                         && c.ReviewStartedAt < cutoff
-                        && c.Status == CourseStatus.UnderReview)
+                        && (c.Status == CourseStatus.UnderReview || c.Status == CourseStatus.PublishedUnderReview))
             .ToListAsync();
 
         foreach (var course in staleCourses)
