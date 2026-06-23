@@ -30,6 +30,7 @@ namespace VoxFox.Models.Entities
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<Achievement> Achievements { get; set; }
         public DbSet<UserAchievement> UserAchievements { get; set; }
+        public DbSet<Image> Images { get; set; }
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {
@@ -390,6 +391,18 @@ namespace VoxFox.Models.Entities
                 new Achievement { Id = Guid.Parse("a1000000-0000-0000-0000-000000000009"), Code = "first_review",      Title = "Критик",         Description = "Оставил свой первый отзыв",        Icon = "✍️" },
                 new Achievement { Id = Guid.Parse("a1000000-0000-0000-0000-000000000010"), Code = "perfect_score",     Title = "Отличник",       Description = "Завершил курс с прогрессом 100%",  Icon = "⭐" }
             );
+
+            modelBuilder.Entity<Image>(entity =>
+            {
+	            entity.HasKey(e => e.Id);
+	            entity.Property(e => e.Id)
+		            .HasColumnType("uuid")
+		            .HasDefaultValueSql("gen_random_uuid()");
+
+	            entity.Property(e => e.ImageBytes)
+		            .HasColumnType("bytea")
+		            .IsRequired();
+            });
 
             base.OnModelCreating(modelBuilder);
         }
