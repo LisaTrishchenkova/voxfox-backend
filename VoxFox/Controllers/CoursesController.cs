@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using VoxFox.Enums;
 using VoxFox.Extensions;
 using VoxFox.Interfaces;
-using VoxFox.Interfaces.User;
 using VoxFox.Models.DTOs;
 using VoxFox.Models.Requests;
 using VoxFox.Models.Requests.CourseRequest;
@@ -18,13 +17,11 @@ public class CoursesController : ControllerBase
 {
     private readonly ICourseService _courseService;
     private readonly ILogger<CoursesController> _logger;
-    private readonly IFileStorageService _fileStorageService;
 
-    public CoursesController(ICourseService courseService, ILogger<CoursesController> logger, IFileStorageService fileStorageService)
+    public CoursesController(ICourseService courseService, ILogger<CoursesController> logger)
     {
         _courseService = courseService;
         _logger = logger;
-        _fileStorageService = fileStorageService;
     }
 
     [HttpGet]
@@ -251,15 +248,9 @@ public class CoursesController : ControllerBase
         var isAdmin = User.IsInRole("Admin");
         if (course.Author?.Id != userId.Value && !isAdmin) return Forbid();
 
-        if (!string.IsNullOrEmpty(course.CoverImageUrl) && course.CoverImageUrl.StartsWith("/covers/"))
-            await _fileStorageService.DeleteCourseCoverAsync(course.CoverImageUrl);
-
-        var result = await _fileStorageService.SaveCourseCoverAsync(id, file);
-        if (!result.Success) return StatusCode(result.StatusCode ?? 400, new { error = result.Message });
-
-        var updateDto = new UpdateCourseDto { CoverImageUrl = result.Data };
+        var updateDto = new UpdateCourseDto { CoverImageUrl = course.CoverImageUrl };
         await _courseService.UpdateCourseAsync(id, updateDto, userId.Value);
-        return Ok(new { coverImageUrl = result.Data });
+        return Ok(new { coverImageUrl = course.CoverImageUrl });
     }
 
     [HttpDelete("{id}/cover")]
@@ -275,12 +266,6 @@ public class CoursesController : ControllerBase
         var isAdmin = User.IsInRole("Admin");
         if (course.Author?.Id != userId.Value && !isAdmin) return Forbid();
         if (string.IsNullOrEmpty(course.CoverImageUrl)) return NotFound(new { error = "Обложка не установлена" });
-
-        if (course.CoverImageUrl.StartsWith("/covers/"))
-        {
-            var deleteResult = await _fileStorageService.DeleteCourseCoverAsync(course.CoverImageUrl);
-            if (!deleteResult.Success) return StatusCode(deleteResult.StatusCode ?? 400, new { error = deleteResult.Message });
-        }
 
         var updateDto = new UpdateCourseDto { CoverImageUrl = null };
         await _courseService.UpdateCourseAsync(id, updateDto, userId.Value);
